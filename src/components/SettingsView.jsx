@@ -510,7 +510,7 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
         </div>
         <p className="text-xs text-slate-400">
           Activate your Casjoe Agent OS Pro license to unlock premium features including advanced AI agents, unlimited prompt slots, and priority updates. Purchase a key at{' '}
-          <a href="https://casjoeagent.gumroad.com" target="_blank" rel="noreferrer" className="text-amber-400 underline">casjoeagent.gumroad.com</a>.
+          <a href="https://casperjoe.gumroad.com/l/casjoeagent" target="_blank" rel="noreferrer" className="text-amber-400 underline">casperjoe.gumroad.com/l/casjoeagent</a>.
         </p>
         <div className="space-y-3">
           <input

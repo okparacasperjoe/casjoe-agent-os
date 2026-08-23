@@ -63,7 +63,7 @@ Casjoe Agent OS is **free to download and use**. A **Pro license** unlocks advan
 | **Free** | \$0 | Core AI chat, CRM, Finance, Inventory, 120+ Prompts |
 | **Pro** | \$19.99 one-time | Unlimited prompt slots, advanced AI agents, priority auto-updates, premium support |
 
-🛒 **Purchase a Pro license key** at [casjoeagent.gumroad.com](https://casjoeagent.gumroad.com)
+🛒 **Purchase a Pro license key** at [casperjoe.gumroad.com/l/casjoeagent](https://casperjoe.gumroad.com/l/casjoeagent)
 
 After purchase you will receive a `XXXX-XXXX-XXXX-XXXX` key. Enter it in **Settings → License Activation** inside the app to unlock Pro features.
 
