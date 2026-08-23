@@ -65,6 +65,7 @@
     ],
     "win": {
       "target": "nsis",
+      "icon": "build/icon.ico",
       "artifactName": "Casjoe-Agent-OS-Setup-${version}-Windows.${ext}"
     },
     "mac": {
