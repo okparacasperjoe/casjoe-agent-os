@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Cpu, HardDrive, Sliders, CheckCircle, ShieldCheck, Zap, Battery, AlertTriangle, ExternalLink, Download, RefreshCw } from 'lucide-react';
+import { Settings, Cpu, HardDrive, Sliders, CheckCircle, ShieldCheck, Zap, Battery, AlertTriangle, ExternalLink, Download, RefreshCw, Key, Star } from 'lucide-react';
 import { listModels, pullModel, checkOllamaConnection, RECOMMENDED_MODELS } from '../services/ollama';
 import { setSetting } from '../db/hooks';
 import db from '../db/database';
@@ -12,8 +12,52 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [pullProgress, setPullProgress] = useState({});
 
+  // License key state
+  const [licenseKey, setLicenseKey] = useState('');
+  const [licenseStatus, setLicenseStatus] = useState(null); // null | 'valid' | 'invalid' | 'checking'
+  const [licenseEmail, setLicenseEmail] = useState('');
+
+  React.useEffect(() => {
+    db.settings.get('licenseKey').then(record => {
+      if (record && record.value) {
+        setLicenseKey(record.value.key || '');
+        setLicenseEmail(record.value.email || '');
+        setLicenseStatus(record.value.status || null);
+      }
+    });
+  }, []);
+
+  const handleActivateLicense = async () => {
+    if (!licenseKey.trim()) return alert('Please enter a license key.');
+    setLicenseStatus('checking');
+    try {
+      // Validate key format locally (XXXX-XXXX-XXXX-XXXX)
+      const keyRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+      if (!keyRegex.test(licenseKey.trim().toUpperCase())) {
+        setLicenseStatus('invalid');
+        return;
+      }
+      // In production, send to your license server for verification
+      // const res = await fetch('https://license.casjoeagent.com/verify', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ key: licenseKey, email: licenseEmail })
+      // });
+      // const data = await res.json();
+      // const valid = data.valid;
+      const valid = true; // placeholder – replace with real API call
+      setLicenseStatus(valid ? 'valid' : 'invalid');
+      if (valid) {
+        await setSetting('licenseKey', { key: licenseKey.trim().toUpperCase(), email: licenseEmail, status: 'valid' });
+      }
+    } catch (e) {
+      setLicenseStatus('invalid');
+    }
+  };
+
   // ERP API Token State
   const [erpApiToken, setErpApiToken] = useState('');
+
 
   // Load token on mount
   React.useEffect(() => {
@@ -450,6 +494,55 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
             <HardDrive className="w-4 h-4 text-amber-500" />
             Export Backup to USB
           </button>
+        </div>
+      </div>
+
+      {/* License Activation */}
+      <div className="bg-[#0E1629] border border-amber-500/30 p-6 rounded-2xl space-y-4">
+        <div className="flex items-center gap-3">
+          <Key className="w-5 h-5 text-amber-400" />
+          <h3 className="text-lg font-bold text-white font-['Outfit']">License Activation</h3>
+          {licenseStatus === 'valid' && (
+            <span className="ml-auto flex items-center gap-1 text-xs text-green-400 bg-green-400/10 px-3 py-1 rounded-full font-semibold">
+              <Star className="w-3 h-3" /> Pro Activated
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate-400">
+          Activate your Casjoe Agent OS Pro license to unlock premium features including advanced AI agents, unlimited prompt slots, and priority updates. Purchase a key at{' '}
+          <a href="https://casjoeagent.gumroad.com" target="_blank" rel="noreferrer" className="text-amber-400 underline">casjoeagent.gumroad.com</a>.
+        </p>
+        <div className="space-y-3">
+          <input
+            type="email"
+            placeholder="Email used at purchase"
+            value={licenseEmail}
+            onChange={e => setLicenseEmail(e.target.value)}
+            className="w-full bg-[#1A2740] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-amber-500"
+          />
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              value={licenseKey}
+              onChange={e => setLicenseKey(e.target.value.toUpperCase())}
+              maxLength={19}
+              className="flex-1 bg-[#1A2740] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white font-mono placeholder-slate-500 outline-none focus:border-amber-500"
+            />
+            <button
+              onClick={handleActivateLicense}
+              disabled={licenseStatus === 'checking'}
+              className="btn-primary text-xs px-5 py-2.5"
+            >
+              {licenseStatus === 'checking' ? 'Checking…' : 'Activate'}
+            </button>
+          </div>
+          {licenseStatus === 'valid' && (
+            <p className="text-xs text-green-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> License is valid – Pro features unlocked!</p>
+          )}
+          {licenseStatus === 'invalid' && (
+            <p className="text-xs text-red-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Invalid key. Please check and try again.</p>
+          )}
         </div>
       </div>
     </div>
