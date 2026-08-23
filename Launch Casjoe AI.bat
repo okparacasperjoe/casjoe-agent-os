@@ -1,0 +1,3 @@
+@echo off
+echo Starting Casjoe Offline AI...
+cmd /c "npm run electron:dev"

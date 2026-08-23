@@ -1,0 +1,19 @@
+{
+  "name": "Casjoe Local AI - Offline Business Engine",
+  "short_name": "Casjoe AI",
+  "description": "Enterprise-grade AI for African businesses. 100% offline, zero API costs, complete data privacy.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060913",
+  "theme_color": "#FF9F00",
+  "orientation": "any",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

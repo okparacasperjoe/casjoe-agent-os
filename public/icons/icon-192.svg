@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Dark circular background -->
+  <circle cx="96" cy="96" r="96" fill="#060913" />
+  
+  <!-- Amber/gold circular arc design -->
+  <circle cx="96" cy="96" r="60" fill="none" stroke="#FF9F00" stroke-width="12" stroke-dasharray="280" stroke-dashoffset="60" stroke-linecap="round" />
+  <circle cx="96" cy="96" r="76" fill="none" stroke="#FF6B00" stroke-width="8" stroke-dasharray="250" stroke-dashoffset="120" stroke-linecap="round" opacity="0.6" />
+  
+  <!-- Gold dot in the center -->
+  <circle cx="96" cy="96" r="20" fill="#FF9F00" />
+</svg>
