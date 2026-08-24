@@ -10,7 +10,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-export default function Modals({ activeModal, onCloseModal }) {
+export default function Modals({ activeModal, onCloseModal, customers = [] }) {
   if (!activeModal) return null;
 
   // Add Customer State
@@ -34,7 +34,7 @@ export default function Modals({ activeModal, onCloseModal }) {
 
   // Create Invoice State
   const [invoiceData, setInvoiceData] = useState({
-    customer: 'Sahara Logistics Ltd',
+    customer: '',
     amount: '450,000',
     currency: 'NGN',
     items: 'Casjoe Agent OS Enterprise Setup & Staff Training'
@@ -268,11 +268,12 @@ export default function Modals({ activeModal, onCloseModal }) {
                 value={invoiceData.customer}
                 onChange={(e) => setInvoiceData({ ...invoiceData, customer: e.target.value })}
                 className="custom-select w-full"
+                required
               >
-                <option value="Sahara Logistics Ltd">Sahara Logistics Ltd</option>
-                <option value="Nairobi Health Hub">Nairobi Health Hub</option>
-                <option value="Gold Coast Traders">Gold Coast Traders</option>
-                <option value="Kano Community Clinic">Kano Community Clinic</option>
+                <option value="" disabled>Select a customer...</option>
+                {customers.map(c => (
+                  <option key={c.id} value={c.name}>{c.name} {c.company ? `(${c.company})` : ''}</option>
+                ))}
               </select>
             </div>
 

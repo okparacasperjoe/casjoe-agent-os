@@ -210,6 +210,7 @@ export default function App() {
       <Modals
         activeModal={activeModal}
         onCloseModal={() => setActiveModal(null)}
+        customers={customers}
       />
     </div>
   );

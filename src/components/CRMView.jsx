@@ -129,6 +129,15 @@ export default function CRMView({ customers, onOpenAddCustomer }) {
               ))}
             </tbody>
           </table>
+          {filtered.length === 0 && (
+            <div className="p-12 text-center text-slate-500 flex flex-col items-center">
+              <Users className="w-12 h-12 mb-4 opacity-20" />
+              <p className="text-sm">No customers found.</p>
+              <button onClick={onOpenAddCustomer} className="mt-4 text-cyan-400 hover:underline text-xs font-bold">
+                + Add your first customer
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
