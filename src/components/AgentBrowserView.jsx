@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Compass, ArrowLeft, ArrowRight, RotateCw, Play, Sparkles, MessageSquare, Globe, Share2, ExternalLink, ChevronUp, ChevronDown, Key, Plus, X, CreditCard, GraduationCap, Link2, User, Building2 } from 'lucide-react';
+import { Compass, ArrowLeft, ArrowRight, RotateCw, Play, Sparkles, MessageSquare, Globe, Share2, ExternalLink, ChevronUp, ChevronDown, Key, Plus, X, CreditCard, GraduationCap, Link2, User, Building2, ShieldAlert } from 'lucide-react';
 import { executeModelRequest } from '../services/modelManager';
 import CookieImportModal from './CookieImportModal';
+
+const ipc = window.require ? window.require('electron').ipcRenderer : null;
+const shell = window.require ? window.require('electron').shell : null;
+
 
 const CASJOE_SUITE = [
   { name: 'WhatsApp Web', url: 'https://web.whatsapp.com', icon: MessageSquare, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:border-emerald-400', desc: 'Chat & Social Messaging' },
@@ -33,9 +37,23 @@ export default function AgentBrowserView() {
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
   const isNewTabPage = !activeTab.url || activeTab.url === 'casjoe:newtab' || activeTab.url === 'about:blank';
 
+  const [showAuthBanner, setShowAuthBanner] = useState(false);
+  const [authBannerUrl, setAuthBannerUrl]   = useState('');
+
   useEffect(() => {
-    const inElectron = Boolean(window.electron || navigator.userAgent.toLowerCase().includes('electron'));
+    const inElectron = Boolean(window.require || navigator.userAgent.toLowerCase().includes('electron'));
     setIsElectron(inElectron);
+
+    // Listen for Google/OAuth sign-in interceptions from main process
+    if (inElectron && ipc) {
+      const handler = (_, { url }) => {
+        setAuthBannerUrl(url);
+        setShowAuthBanner(true);
+        setTimeout(() => setShowAuthBanner(false), 8000);
+      };
+      ipc.on('browser:auth-intercepted', handler);
+      return () => ipc.removeListener('browser:auth-intercepted', handler);
+    }
   }, []);
 
   useEffect(() => {
@@ -100,6 +118,62 @@ export default function AgentBrowserView() {
   };
 
   const [currentAiAction, setCurrentAiAction] = useState(null);
+  const [pageTitle, setPageTitle]   = useState('');
+  const [canGoBack, setCanGoBack]   = useState(false);
+  const [canGoFwd, setCanGoFwd]     = useState(false);
+  const [isLoading, setIsLoading]   = useState(false);
+
+  // Derive security state from current URL
+  const getSecurityInfo = (url) => {
+    if (!url || url === 'casjoe:newtab' || url === 'about:blank') return { icon: '🌐', label: '', color: 'text-slate-500' };
+    if (url.startsWith('https://')) return { icon: '🔒', label: 'Secure', color: 'text-emerald-400' };
+    if (url.startsWith('http://'))  return { icon: '⚠️', label: 'Not Secure', color: 'text-red-400' };
+    return { icon: '🌐', label: '', color: 'text-slate-400' };
+  };
+  const secInfo = getSecurityInfo(activeTab?.url);
+
+  // Wire up webview navigation events
+  useEffect(() => {
+    const wv = webviewRef.current;
+    if (!wv) return;
+
+    const onStart   = ()  => setIsLoading(true);
+    const onStop    = ()  => setIsLoading(false);
+    const onNav     = (e) => {
+      const newUrl = e.url || e.validatedURL;
+      if (!newUrl) return;
+      setOmnibarText(newUrl);
+      setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, url: newUrl } : t));
+      setCanGoBack(wv.canGoBack?.() ?? false);
+      setCanGoFwd(wv.canGoForward?.() ?? false);
+    };
+    const onTitle = (e) => {
+      setPageTitle(e.title);
+      setTabs(prev => prev.map(t => t.id === activeTabId ? { ...t, title: e.title || t.title } : t));
+    };
+
+    wv.addEventListener('did-start-loading',     onStart);
+    wv.addEventListener('did-stop-loading',      onStop);
+    wv.addEventListener('did-navigate',          onNav);
+    wv.addEventListener('did-navigate-in-page',  onNav);
+    wv.addEventListener('page-title-updated',    onTitle);
+
+    return () => {
+      wv.removeEventListener('did-start-loading',    onStart);
+      wv.removeEventListener('did-stop-loading',     onStop);
+      wv.removeEventListener('did-navigate',         onNav);
+      wv.removeEventListener('did-navigate-in-page', onNav);
+      wv.removeEventListener('page-title-updated',   onTitle);
+    };
+  }, [activeTabId, webviewRef.current]);
+
+  const handleBack    = () => webviewRef.current?.goBack?.();
+  const handleForward = () => webviewRef.current?.goForward?.();
+  const handleReload  = () => {
+    if (isNewTabPage) return;
+    webviewRef.current?.reload?.() || handleNavigate(activeTab.url);
+  };
+
 
   const handleOmnibarSubmit = async () => {
     if (!omnibarText.trim() || isAutomating) return;
@@ -446,10 +520,27 @@ export default function AgentBrowserView() {
 
             {!isElectron && (
               <div className="bg-amber-950/40 border-b border-amber-800/60 text-amber-300 text-[11px] px-4 py-2 flex items-center justify-between shrink-0">
-                <span>⚠️ <strong>Web Mode Active:</strong> WhatsApp Web & LinkedIn block standard web iframes. Open native <strong>Casjoe Desktop App</strong> window to bypass frame security!</span>
+                <span>⚠️ <strong>Web Mode Active:</strong> WhatsApp Web &amp; LinkedIn block standard web iframes. Open native <strong>Casjoe Desktop App</strong> window to bypass frame security!</span>
                 <a href={activeTab.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 hover:underline text-cyan-400">
                   <ExternalLink className="w-3 h-3" /> Open Directly
                 </a>
+              </div>
+            )}
+
+            {/* Auth interception banner — shown when Google/OAuth login is redirected to real browser */}
+            {showAuthBanner && (
+              <div className="bg-blue-950/80 border-b border-blue-500/40 text-blue-200 text-[11px] px-4 py-2.5 flex items-center justify-between shrink-0 animate-in slide-in-from-top">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0" />
+                  <span>
+                    <strong className="text-white">Sign-in opened in your default browser.</strong>{' '}
+                    Google blocks login inside embedded apps for your security — so we redirected it automatically.
+                    Log in there, then come back to continue.
+                  </span>
+                </div>
+                <button onClick={() => setShowAuthBanner(false)} className="ml-3 text-blue-400 hover:text-white shrink-0">
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
 
@@ -460,7 +551,7 @@ export default function AgentBrowserView() {
                   key={activeTab.id}
                   src={activeTab.url}
                   partition="persist:casjoe_agent_browser"
-                  useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                  useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
                   style={{ width: '100%', height: '100%' }}
                   allowpopups="true"
                 />

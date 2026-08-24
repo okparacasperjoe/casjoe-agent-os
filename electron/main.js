@@ -30,10 +30,15 @@ function createWindow() {
   // Setup Casjoe Agent OS Native Desktop Bridge
   setupAgentBridge(mainWindow);
 
-  // Inject Chrome Desktop User-Agent for WhatsApp Web & Social Platforms
-  const CHROME_DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+  // Up-to-date Chrome Desktop User-Agent — avoids "browser not supported" / "not secure" banners
+  const CHROME_DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36';
 
   const browserSession = session.fromPartition('persist:casjoe_agent_browser');
+
+  // Trust all certificates in the agent browser session so HTTPS sites load cleanly
+  browserSession.setCertificateVerifyProc((request, callback) => {
+    callback(0); // 0 = OK / trusted
+  });
 
   // Disable Windows Hello / Passkey popups on both default and browser partition
   if (browserSession.setWebAuthnHandler) {
@@ -46,6 +51,8 @@ function createWindow() {
   [session.defaultSession, browserSession].forEach((sess) => {
     sess.webRequest.onBeforeSendHeaders((details, callback) => {
       details.requestHeaders['User-Agent'] = CHROME_DESKTOP_UA;
+      // Remove headers that reveal Electron / WebView identity
+      delete details.requestHeaders['X-Requested-With'];
       callback({ cancel: false, requestHeaders: details.requestHeaders });
     });
 
@@ -59,12 +66,60 @@ function createWindow() {
     });
   });
 
-  // Handle external link clicks by opening in user's default browser
+  // URLs that Google / Microsoft / Apple block in embedded webviews.
+  // We open these in the user's real default browser automatically.
+  const AUTH_HOSTNAMES = [
+    'accounts.google.com',
+    'myaccount.google.com',
+    'login.microsoftonline.com',
+    'login.live.com',
+    'appleid.apple.com',
+    'github.com/login',
+    'github.com/session',
+  ];
+  const isAuthUrl = (url) => {
+    try {
+      const { hostname, pathname } = new URL(url);
+      return AUTH_HOSTNAMES.some(h => hostname === h || url.includes(h));
+    } catch { return false; }
+  };
+
+  // Intercept new window opens — send auth URLs to real browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http:') || url.startsWith('https:')) {
-      return { action: 'allow' };
+    if (isAuthUrl(url)) {
+      shell.openExternal(url);
+      mainWindow.webContents.send('browser:auth-intercepted', { url });
+      return { action: 'deny' };
     }
     return { action: 'allow' };
+  });
+
+  // Also intercept webview will-navigate events for auth pages
+  mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+    // Ensure webview uses the browser partition user-agent
+    webPreferences.partition = 'persist:casjoe_agent_browser';
+  });
+
+  app.on('web-contents-created', (event, contents) => {
+    if (contents.getType() === 'webview') {
+      contents.setUserAgent(CHROME_DESKTOP_UA);
+      contents.on('will-navigate', (e, url) => {
+        if (isAuthUrl(url)) {
+          e.preventDefault();
+          shell.openExternal(url);
+          mainWindow.webContents.send('browser:auth-intercepted', { url });
+        }
+      });
+      contents.on('new-window', (e, url) => {
+        e.preventDefault();
+        if (isAuthUrl(url)) {
+          shell.openExternal(url);
+          mainWindow.webContents.send('browser:auth-intercepted', { url });
+        } else {
+          shell.openExternal(url);
+        }
+      });
+    }
   });
 
   if (isDev) {
