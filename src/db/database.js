@@ -49,7 +49,7 @@ export const initializeDatabase = async () => {
     const invoiceCount = await db.invoices.count();
     if (invoiceCount === 0) {
       await db.invoices.bulkAdd([
-        { invoiceId: 'INV-2026-001', customer: 'Sahara Logistics Ltd', amount: '₦1,850,000', currency: 'NGN', date: '2026-07-28', status: 'Paid', items: 'Casjoe Local AI Hub x2', createdAt: now },
+        { invoiceId: 'INV-2026-001', customer: 'Sahara Logistics Ltd', amount: '₦1,850,000', currency: 'NGN', date: '2026-07-28', status: 'Paid', items: 'Casjoe Agent OS Hub x2', createdAt: now },
         { invoiceId: 'INV-2026-002', customer: 'Nairobi Health Hub', amount: 'KSh 450,000', currency: 'KES', date: '2026-07-25', status: 'Pending', items: 'Medical RAG License & 8GB Laptop Config', createdAt: now },
         { invoiceId: 'INV-2026-003', customer: 'Gold Coast Traders', amount: 'GHS 32,000', currency: 'GHS', date: '2026-07-20', status: 'Paid', items: 'Offline CRM System Setup', createdAt: now },
         { invoiceId: 'INV-2026-004', customer: 'Kano Community Clinic', amount: '₦1,200,000', currency: 'NGN', date: '2026-07-18', status: 'Paid', items: 'Offline Telehealth Knowledge Base', createdAt: now }
@@ -72,7 +72,7 @@ export const initializeDatabase = async () => {
     const inventoryCount = await db.inventory.count();
     if (inventoryCount === 0) {
       await db.inventory.bulkAdd([
-        { sku: 'SKU-001', name: 'Casjoe Local AI Hub', category: 'Hardware', quantity: 45, price: '850000', location: 'Lagos Warehouse', status: 'In Stock', createdAt: now },
+        { sku: 'SKU-001', name: 'Casjoe Agent OS Hub', category: 'Hardware', quantity: 45, price: '850000', location: 'Lagos Warehouse', status: 'In Stock', createdAt: now },
         { sku: 'SKU-002', name: '8GB RAM Upgrade Kit', category: 'Components', quantity: 120, price: '45000', location: 'Lagos Warehouse', status: 'In Stock', createdAt: now },
         { sku: 'SKU-003', name: 'Offline Solar Router', category: 'Hardware', quantity: 12, price: '120000', location: 'Kano Branch', status: 'Low Stock', createdAt: now },
         { sku: 'SKU-004', name: 'Medical RAG License', category: 'Software', quantity: 999, price: '250000', location: 'Digital', status: 'In Stock', createdAt: now },

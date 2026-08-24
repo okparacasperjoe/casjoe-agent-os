@@ -1,4 +1,4 @@
-// Mock Data for Casjoe Local AI - Offline Business Engine
+// Mock Data for Casjoe Agent OS - Offline Business Engine
 
 export const INITIAL_STATS = {
   customers: { value: '1,248', change: '+14.2%', trend: [15, 22, 28, 35, 42, 50, 68] },
@@ -73,14 +73,14 @@ export const PRESET_QNA = [
   },
   {
     question: "How can I increase sales for my small business?",
-    answer: "Here are proven ways to increase sales for your small business:\n1. Understand your customers deeply\n2. Improve your product/service offering\n3. Build a strong local presence\n4. Leverage localized SMS & WhatsApp offline marketing\n5. Offer excellent customer service\n6. Track results and optimize using Casjoe Local AI analytics",
+    answer: "Here are proven ways to increase sales for your small business:\n1. Understand your customers deeply\n2. Improve your product/service offering\n3. Build a strong local presence\n4. Leverage localized SMS & WhatsApp offline marketing\n5. Offer excellent customer service\n6. Track results and optimize using Casjoe Agent OS analytics",
     sources: [
       { doc: "Strategy_Deck.docx", page: "Page 4", snippet: "Growth Pillars: Focus on hyper-local merchant retention and zero-latency customer support." }
     ]
   },
   {
     question: "Summarize sales performance for this month.",
-    answer: "Sales are up 18% this month across all retail channels. Revenue increased by 22% compared to last month (reaching ₦9.8M). The top revenue driver was the Casjoe Local AI hardware bundle.",
+    answer: "Sales are up 18% this month across all retail channels. Revenue increased by 22% compared to last month (reaching ₦9.8M). The top revenue driver was the Casjoe Agent OS hardware bundle.",
     sources: [
       { doc: "Sales_Report.xlsx", page: "Page 2", snippet: "July Revenue Summary: Total Gross Sales ₦12.4M, Net Margin 79.0%." }
     ]
@@ -139,7 +139,7 @@ export const MOCK_CUSTOMERS = [
 ];
 
 export const MOCK_INVOICES = [
-  { id: 'INV-2026-001', customer: 'Sahara Logistics Ltd', amount: '₦1,850,000', currency: 'NGN', date: '2026-07-28', status: 'Paid', items: 'Casjoe Local AI Hub x2' },
+  { id: 'INV-2026-001', customer: 'Sahara Logistics Ltd', amount: '₦1,850,000', currency: 'NGN', date: '2026-07-28', status: 'Paid', items: 'Casjoe Agent OS Hub x2' },
   { id: 'INV-2026-002', customer: 'Nairobi Health Hub', amount: 'KSh 450,000', currency: 'KES', date: '2026-07-25', status: 'Pending', items: 'Medical RAG License & 8GB Laptop Config' },
   { id: 'INV-2026-003', customer: 'Gold Coast Traders', amount: 'GHS 32,000', currency: 'GHS', date: '2026-07-20', status: 'Paid', items: 'Offline CRM System Setup' },
   { id: 'INV-2026-004', customer: 'Kano Community Clinic', amount: '₦1,200,000', currency: 'NGN', date: '2026-07-18', status: 'Paid', items: 'Offline Telehealth Knowledge Base' }

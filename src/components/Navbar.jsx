@@ -16,7 +16,7 @@ export default function Navbar({ selectedModel, ollamaConnected, isDarkMode, tog
 
           <div>
             <h1 className="text-xl font-extrabold font-['Outfit'] text-white tracking-tight leading-none transition-colors">
-              Casjoe Local AI
+              Casjoe Agent OS
             </h1>
             <span className="text-[11px] font-semibold text-[#FF9F00] tracking-wide block mt-0.5">
               Offline Business AI

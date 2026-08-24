@@ -37,7 +37,7 @@ export default function Modals({ activeModal, onCloseModal }) {
     customer: 'Sahara Logistics Ltd',
     amount: '450,000',
     currency: 'NGN',
-    items: 'Casjoe Local AI Enterprise Setup & Staff Training'
+    items: 'Casjoe Agent OS Enterprise Setup & Staff Training'
   });
 
   // Add Task State
@@ -109,7 +109,7 @@ export default function Modals({ activeModal, onCloseModal }) {
   const handleGenerateReport = () => {
     setIsGeneratingReport(true);
     setTimeout(() => {
-      setGeneratedReportText(`CASJOE LOCAL AI OFFLINE REPORT (${reportType.toUpperCase()})\n\nKey Insights:\n1. July Revenue reached ₦9.8M with 79% gross profit margins across regional branches.\n2. Local AI query volume increased 34% with zero cloud API expense.\n3. Customer retention rate improved to 98.4% across Lagos, Nairobi, Accra, and Johannesburg hubs.`);
+      setGeneratedReportText(`Casjoe Agent OS OFFLINE REPORT (${reportType.toUpperCase()})\n\nKey Insights:\n1. July Revenue reached ₦9.8M with 79% gross profit margins across regional branches.\n2. Agent OS query volume increased 34% with zero cloud API expense.\n3. Customer retention rate improved to 98.4% across Lagos, Nairobi, Accra, and Johannesburg hubs.`);
       setIsGeneratingReport(false);
     }, 1200);
   };
@@ -378,7 +378,7 @@ export default function Modals({ activeModal, onCloseModal }) {
                 className="btn-primary w-full text-xs justify-center py-3"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>{isGeneratingReport ? 'Compiling Offline AI Insights...' : 'Run Local AI Report Generator'}</span>
+                <span>{isGeneratingReport ? 'Compiling Offline AI Insights...' : 'Run Agent OS Report Generator'}</span>
               </button>
             )}
 

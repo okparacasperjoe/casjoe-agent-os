@@ -16,7 +16,7 @@ const OnboardingWizard = ({ onComplete, ollamaConnected, ollamaModels }) => {
             <div className="bg-[#FF9F00]/20 p-4 rounded-full">
               <Bot className="w-16 h-16 text-[#FF9F00]" />
             </div>
-            <h1 className="text-3xl font-bold text-white">Welcome to Casjoe Local AI</h1>
+            <h1 className="text-3xl font-bold text-white">Welcome to Casjoe Agent OS</h1>
             <p className="text-gray-400 max-w-md">
               Your intelligent, offline-first assistant for business automation.
               Let's get you set up in just a few steps.

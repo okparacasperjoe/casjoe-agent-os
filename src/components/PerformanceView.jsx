@@ -46,7 +46,7 @@ export default function PerformanceView({ currentModel, ramUsage, cpuUsage }) {
             <div className="w-5 h-5 rounded-md bg-[#FF9F00] text-black font-bold flex items-center justify-center text-[10px]">
               C
             </div>
-            <span className="text-xs font-bold text-white">Casjoe Local AI</span>
+            <span className="text-xs font-bold text-white">Casjoe Agent OS</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -120,7 +120,7 @@ export default function PerformanceView({ currentModel, ramUsage, cpuUsage }) {
               <div className="bg-[#101A33] p-3 rounded-xl text-xs text-slate-200 space-y-2 border border-amber-500/20">
                 <div className="flex items-center gap-1.5 text-[#FF9F00] font-bold text-xs">
                   <div className="w-4 h-4 rounded-full bg-[#FF9F00] text-black text-[9px] flex items-center justify-center font-bold">C</div>
-                  <span>Casjoe Local AI</span>
+                  <span>Casjoe Agent OS</span>
                 </div>
                 <p className="leading-relaxed">Here are proven ways to increase sales for your small business:</p>
                 <ol className="list-decimal list-inside space-y-1 text-slate-300">
