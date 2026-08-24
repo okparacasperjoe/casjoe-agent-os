@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, session } from 'electron';
+import { app, BrowserWindow, shell, session, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { setupAgentBridge } from './agentBridge.js';
@@ -88,23 +88,40 @@ app.whenReady().then(() => {
     autoUpdater.logger = require('electron-log');
     autoUpdater.logger.transports.file.level = 'info';
 
-    autoUpdater.on('update-available', () => console.log('Update available'));
-    autoUpdater.on('update-not-available', () => console.log('No update'));
-    autoUpdater.on('download-progress', info => console.log(`Downloading ${Math.round(info.percent)}%`));
+    const notify = (channel, data) => {
+      BrowserWindow.getAllWindows().forEach(w => w.webContents.send(channel, data));
+    };
+
+    autoUpdater.on('checking-for-update', () => notify('updater:status', { status: 'checking' }));
+    autoUpdater.on('update-available', info => notify('updater:status', { status: 'available', version: info.version }));
+    autoUpdater.on('update-not-available', () => notify('updater:status', { status: 'up-to-date' }));
+    autoUpdater.on('download-progress', info => notify('updater:status', { status: 'downloading', percent: Math.round(info.percent) }));
+    autoUpdater.on('error', err => notify('updater:status', { status: 'error', message: err.message }));
+
     autoUpdater.on('update-downloaded', info => {
+      notify('updater:status', { status: 'downloaded', version: info.version });
       const response = dialog.showMessageBoxSync({
         type: 'question',
-        buttons: ['Restart now', 'Later'],
+        buttons: ['Restart & Install', 'Later'],
         defaultId: 0,
-        title: 'Update Ready',
-        message: `Version ${info.version} downloaded. Restart now?`
+        title: 'Update Ready – Casjoe Agent OS',
+        message: `Version ${info.version} has been downloaded.\nRestart now to install the update?`
       });
       if (response === 0) autoUpdater.quitAndInstall();
     });
-    autoUpdater.on('error', err => console.error('Auto-update error:', err));
+
+    // IPC: renderer calls 'check-for-updates' to trigger a manual check
+    ipcMain.handle('check-for-updates', async () => {
+      try {
+        await autoUpdater.checkForUpdates();
+      } catch (e) {
+        notify('updater:status', { status: 'error', message: e.message });
+      }
+    });
   };
   initAutoUpdater();
-  autoUpdater.checkForUpdatesAndNotify();
+  // Auto-check on launch (only in production)
+  if (!isDev) autoUpdater.checkForUpdatesAndNotify();
 });
 
 app.on('activate', () => {

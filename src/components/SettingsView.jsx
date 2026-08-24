@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
-import { Settings, Cpu, HardDrive, Sliders, CheckCircle, ShieldCheck, Zap, Battery, AlertTriangle, ExternalLink, Download, RefreshCw, Key, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, Cpu, HardDrive, Sliders, CheckCircle, ShieldCheck, Zap, Battery, AlertTriangle, ExternalLink, Download, RefreshCw, Key, Star, ArrowUpCircle } from 'lucide-react';
 import { listModels, pullModel, checkOllamaConnection, RECOMMENDED_MODELS } from '../services/ollama';
 import { setSetting } from '../db/hooks';
 import db from '../db/database';
+
+// ipcRenderer is available when running inside Electron (contextIsolation: false)
+const ipc = window.require ? window.require('electron').ipcRenderer : null;
+
 
 export default function SettingsView({ ollamaConnected, ollamaModels, selectedModel, setSelectedModel }) {
   const [quantization, setQuantization] = useState('Q4_K_M');
@@ -31,21 +35,20 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
     if (!licenseKey.trim()) return alert('Please enter a license key.');
     setLicenseStatus('checking');
     try {
-      // Validate key format locally (XXXX-XXXX-XXXX-XXXX)
+      // Validate key format locally first (XXXX-XXXX-XXXX-XXXX)
       const keyRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
       if (!keyRegex.test(licenseKey.trim().toUpperCase())) {
         setLicenseStatus('invalid');
         return;
       }
-      // In production, send to your license server for verification
-      // const res = await fetch('https://license.casjoeagent.com/verify', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ key: licenseKey, email: licenseEmail })
-      // });
-      // const data = await res.json();
-      // const valid = data.valid;
-      const valid = true; // placeholder – replace with real API call
+      // Validate against license server
+      const res = await fetch('https://casjoe-license.casperjoe.workers.dev/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: licenseKey.trim().toUpperCase(), email: licenseEmail.trim().toLowerCase() })
+      });
+      const data = await res.json();
+      const valid = data.valid === true;
       setLicenseStatus(valid ? 'valid' : 'invalid');
       if (valid) {
         await setSetting('licenseKey', { key: licenseKey.trim().toUpperCase(), email: licenseEmail, status: 'valid' });
@@ -53,6 +56,22 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
     } catch (e) {
       setLicenseStatus('invalid');
     }
+  };
+
+  // Auto-update state
+  const [updateStatus, setUpdateStatus] = useState(null); // null | {status, version?, percent?, message?}
+
+  useEffect(() => {
+    if (!ipc) return;
+    const handler = (_, data) => setUpdateStatus(data);
+    ipc.on('updater:status', handler);
+    return () => ipc.removeListener('updater:status', handler);
+  }, []);
+
+  const handleCheckForUpdates = async () => {
+    if (!ipc) return setUpdateStatus({ status: 'error', message: 'Auto-update only works in the installed app.' });
+    setUpdateStatus({ status: 'checking' });
+    await ipc.invoke('check-for-updates');
   };
 
   // ERP API Token State
@@ -450,28 +469,42 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
             v1.0.0 Stable
           </span>
         </h3>
-        
+
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-emerald-400" />
-              Check for App Updates & New Releases
+              <ArrowUpCircle className="w-4 h-4 text-emerald-400" />
+              Auto-Update
             </h4>
             <p className="text-xs text-slate-400 max-w-2xl">
-              Casjoe Local AI runs 100% offline. To update your desktop app to the latest version, click below to visit our official GitHub Releases page. Download the new installer (<code className="text-amber-400">.exe</code>) and run it to update your software without losing your local database or chat history.
+              Casjoe Agent OS checks for updates automatically on launch. Click below to check right now — if an update is available it will download and install silently.
             </p>
+            {/* Update status feedback */}
+            {updateStatus && (
+              <div className={`mt-2 text-xs font-semibold flex items-center gap-2 px-3 py-2 rounded-lg border ${
+                updateStatus.status === 'up-to-date'  ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' :
+                updateStatus.status === 'available' || updateStatus.status === 'downloaded' ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' :
+                updateStatus.status === 'error'       ? 'text-red-400 bg-red-400/10 border-red-400/20' :
+                'text-slate-300 bg-white/5 border-white/10'
+              }`}>
+                {updateStatus.status === 'checking'    && <><RefreshCw className="w-3 h-3 animate-spin" /> Checking for updates…</>}
+                {updateStatus.status === 'up-to-date'  && <><CheckCircle className="w-3 h-3" /> You're on the latest version!</>}
+                {updateStatus.status === 'available'   && <><Download className="w-3 h-3" /> Update v{updateStatus.version} found — downloading…</>}
+                {updateStatus.status === 'downloading' && <><RefreshCw className="w-3 h-3 animate-spin" /> Downloading… {updateStatus.percent}%</>}
+                {updateStatus.status === 'downloaded'  && <><CheckCircle className="w-3 h-3" /> v{updateStatus.version} ready — restart to install</>}
+                {updateStatus.status === 'error'       && <><AlertTriangle className="w-3 h-3" /> {updateStatus.message}</>}
+              </div>
+            )}
           </div>
-          
-          <a 
-            href="https://github.com/okparacasperjoe/casjoelocalai/releases"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-gold text-xs py-2.5 px-5 flex items-center gap-2 whitespace-nowrap"
+
+          <button
+            onClick={handleCheckForUpdates}
+            disabled={updateStatus?.status === 'checking' || updateStatus?.status === 'downloading'}
+            className="btn-primary text-xs py-2.5 px-5 flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Download className="w-4 h-4" />
-            <span>Check GitHub Releases for Updates</span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-          </a>
+            <RefreshCw className={`w-4 h-4 ${updateStatus?.status === 'checking' || updateStatus?.status === 'downloading' ? 'animate-spin' : ''}`} />
+            <span>Check for Updates</span>
+          </button>
         </div>
       </div>
 
