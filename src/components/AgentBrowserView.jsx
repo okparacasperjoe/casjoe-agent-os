@@ -722,67 +722,101 @@ const isPureUrl = (input) => {
     }
   };
 
-  // 8. Manus-Style Multi-Step Autonomous Goal Execution
+  // 8. Manus-Style Multi-Step Autonomous Goal Execution (Universal Web Agent)
   const executeManusAutonomousGoal = async (goalText) => {
     setIsSideDrawerOpen(true);
     setActiveDrawerTab('plan');
 
-    // Generate Dynamic 4-Step Plan
+    // Extract search query
+    const searchQuery = goalText.replace(/^(search for|search|find|look up|research|compare|browse|open|check|extract table about|give me)\s+/i, '').trim() || goalText;
+
+    // Generate Dynamic 5-Step Plan in Manus Drawer
     const initialPlan = [
-      { id: 1, text: `Navigate and search for: "${goalText.slice(0, 35)}..."`, status: 'pending' },
-      { id: 2, text: 'Wait for page load and inspect DOM structure', status: 'pending' },
-      { id: 3, text: 'Extract structured information, tables & pricing data', status: 'pending' },
-      { id: 4, text: 'Capture visual snapshot and synthesize findings into Scratchpad', status: 'pending' }
+      { id: 1, title: `Open Google and search for "${searchQuery.slice(0, 30)}..."`, status: 'active' },
+      { id: 2, title: 'Inspect organic search results and click top match', status: 'pending' },
+      { id: 3, title: 'Explore destination webpage and inspect DOM content', status: 'pending' },
+      { id: 4, title: 'Extract structured information, pricing, or answers', status: 'pending' },
+      { id: 5, title: 'Synthesize findings and save report into Scratchpad', status: 'pending' }
     ];
     setTaskPlan(initialPlan);
 
-    // Step 1: Search / Navigation
-    setTaskPlan(p => p.map(s => s.id === 1 ? { ...s, status: 'active' } : s));
-    const searchQuery = goalText.replace(/search for|find|look up|extract|compare|table/gi, '').trim();
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery || goalText)}`;
-    addLog(`🔍 [Manus Step 1/4] Navigating to Google search: "${searchQuery || goalText}"...`, 'action');
-    handleNavigate(searchUrl);
+    // Step 1: Open Google and visibly type the search query with typewriter keystrokes
+    addLog(`🌐 [Step 1/5] Opening Google search portal...`, 'action');
+    handleNavigate('https://www.google.com');
+    await sleep(2800);
+
+    if (isAbortedRef.current) return;
+
+    addLog(`✍️ Moving AI Cursor to Google search box and typing "${searchQuery}"...`, 'action');
+    await executeAiCursorAction({
+      type: 'type',
+      target: 'textarea[name="q"], input[name="q"], [role="combobox"]',
+      value: searchQuery,
+      desc: `Typing "${searchQuery}" into Google`
+    });
+
+    await sleep(500);
+
+    // Press enter or click search button
+    await executeAiCursorAction({
+      type: 'click',
+      target: 'input[name="btnK"], button[type="submit"], center input[value*="Search" i]',
+      desc: `Submitting Google search query`
+    });
+
+    await sleep(3000);
+    setTaskPlan(p => p.map(s => s.id === 1 ? { ...s, status: 'completed' } : s.id === 2 ? { ...s, status: 'active' } : s));
+
+    if (isAbortedRef.current) return;
+
+    // Step 2: Inspect organic results, scroll, and click best match
+    addLog(`🔍 [Step 2/5] Inspecting Google search results and selecting top match...`, 'action');
+    await executeAiCursorAction({
+      type: 'scroll',
+      target: 'window',
+      desc: 'Scanning Google search results'
+    });
+
+    await sleep(1000);
+
+    // Highlight and click top organic search link
+    await executeAiCursorAction({
+      type: 'click',
+      target: '#search h3, #rso h3, .g h3, h3, a[jsname="UWckNb"]',
+      desc: 'Clicking primary organic search result'
+    });
+
     await sleep(3500);
-    setTaskPlan(p => p.map(s => s.id === 1 ? { ...s, status: 'completed' } : s));
+    setTaskPlan(p => p.map(s => s.id === 2 ? { ...s, status: 'completed' } : s.id === 3 ? { ...s, status: 'active' } : s));
 
     if (isAbortedRef.current) return;
 
-    // Step 2: Inspect & Scroll
-    setTaskPlan(p => p.map(s => s.id === 2 ? { ...s, status: 'active' } : s));
-    addLog(`🔍 [Manus Step 2/4] Scrolling and clicking top organic result...`, 'action');
-    if (webviewRef.current?.executeJavaScript) {
-      await webviewRef.current.executeJavaScript(`window.scrollBy({ top: 350, behavior: 'smooth' });`);
-      await sleep(1500);
-      // Click first organic search link
-      await webviewRef.current.executeJavaScript(`
-        (function() {
-          const firstLink = document.querySelector('h3, .g a, a[jsname="UWckNb"], main a');
-          if (firstLink) {
-            firstLink.click();
-          }
-        })();
-      `);
-      await sleep(3000);
-    }
-    setTaskPlan(p => p.map(s => s.id === 2 ? { ...s, status: 'completed' } : s));
+    // Step 3: Explore destination webpage & scroll through content
+    addLog(`🌐 [Step 3/5] Inspecting destination webpage structure...`, 'action');
+    await executeAiCursorAction({
+      type: 'scroll',
+      target: 'window',
+      desc: 'Exploring loaded webpage content'
+    });
+
+    await sleep(1500);
+    setTaskPlan(p => p.map(s => s.id === 3 ? { ...s, status: 'completed' } : s.id === 4 ? { ...s, status: 'active' } : s));
 
     if (isAbortedRef.current) return;
 
-    // Step 3: Extract structured data
-    setTaskPlan(p => p.map(s => s.id === 3 ? { ...s, status: 'active' } : s));
-    addLog(`📊 [Manus Step 3/4] Extracting structured data and specs...`, 'action');
+    // Step 4: Extract structured tables, products, or article content
+    addLog(`📊 [Step 4/5] Extracting live data, articles, and answers...`, 'action');
     await extractStructuredTableOrProducts();
-    setTaskPlan(p => p.map(s => s.id === 3 ? { ...s, status: 'completed' } : s));
+    setTaskPlan(p => p.map(s => s.id === 4 ? { ...s, status: 'completed' } : s.id === 5 ? { ...s, status: 'active' } : s));
 
     if (isAbortedRef.current) return;
 
-    // Step 4: Capture Visual Snapshot
-    setTaskPlan(p => p.map(s => s.id === 4 ? { ...s, status: 'active' } : s));
-    addLog(`📸 [Manus Step 4/4] Capturing visual screenshot snapshot...`, 'action');
+    // Step 5: Capture snapshot and finalize
+    addLog(`📸 [Step 5/5] Capturing high-resolution viewport snapshot...`, 'action');
     await captureScreenshot();
-    setTaskPlan(p => p.map(s => s.id === 4 ? { ...s, status: 'completed' } : s));
+    setTaskPlan(p => p.map(s => s.id === 5 ? { ...s, status: 'completed' } : s));
 
-    addLog(`🎉 Manus Autonomous Goal Completed! Check Plan, Scratchpad, and Vision drawer.`, 'success');
+    addLog(`🎉 Universal AI Browser Task Finished! Check Plan and Scratchpad.`, 'success');
   };
 
   // 9. Form AutoFill Helper with Business Identity Profile
@@ -1233,8 +1267,11 @@ const isPureUrl = (input) => {
         return;
       }
 
-      // Case D: Universal Navigation & Custom Step Execution
-      const domainMatch = commandText.match(/\b([a-zA-Z0-9-]+\.(?:com|org|net|io|co|ng|app|gov|edu|me|biz|site|xyz|online)(?:\/[^\s]*)?)\b/i);
+      // Case D: Universal Google & Web Autonomous Takeover
+      if (isNewTabPage && !domainMatch && !recipeId && !lowerCmd.includes('whatsapp') && !lowerCmd.includes('linkedin') && !lowerCmd.includes('facebook') && !lowerCmd.includes('casjoe')) {
+        await executeManusAutonomousGoal(commandText);
+        return;
+      }
 
       let targetUrl = targetUrlOverride || activeTab.url;
       if (domainMatch && domainMatch[1]) {
