@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ErrorBoundary from './ErrorBoundary';
 import CRMView from './CRMView';
 import FinanceView from './FinanceView';
 import InventoryView from './InventoryView';
@@ -83,7 +84,7 @@ export default function ERPView({
     {syncing ? 'Syncing...' : 'Sync Now'}
   </button>
 </div>
-      <div>{renderSection()}</div>
+      <ErrorBoundary>{renderSection()}</ErrorBoundary>
     </div>
   );
 }

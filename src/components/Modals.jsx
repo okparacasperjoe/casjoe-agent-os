@@ -11,8 +11,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 export default function Modals({ activeModal, onCloseModal, customers = [] }) {
-  if (!activeModal) return null;
-
   // Add Customer State
   const [customerData, setCustomerData] = useState({
     name: '',
@@ -52,6 +50,8 @@ export default function Modals({ activeModal, onCloseModal, customers = [] }) {
   const [uploadFileName, setUploadFileName] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [isParsing, setIsParsing] = useState(false);
+
+  if (!activeModal) return null;
 
   const handleCustomerSubmit = async (e) => {
     e.preventDefault();
@@ -270,10 +270,16 @@ export default function Modals({ activeModal, onCloseModal, customers = [] }) {
                 className="custom-select w-full"
                 required
               >
-                <option value="" disabled>Select a customer...</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.name}>{c.name} {c.company ? `(${c.company})` : ''}</option>
-                ))}
+                {customers.length === 0 ? (
+                  <option value="" disabled>No customers found. Add one in CRM first.</option>
+                ) : (
+                  <>
+                    <option value="" disabled>Select a customer...</option>
+                    {customers.map(c => (
+                      <option key={c.id} value={c.name}>{c.name} {c.company ? `(${c.company})` : ''}</option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
 

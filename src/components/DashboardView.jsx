@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, ShoppingCart, TrendingUp, Sparkles, Send, UserPlus, FileText, CheckSquare, MoreVertical, CheckCheck } from 'lucide-react';
+import { Users, Sparkles, Send, UserPlus, FileText, CheckSquare, MoreVertical, CheckCheck } from 'lucide-react';
 import { Line, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -13,8 +13,6 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { addChatMessage } from '../db/hooks';
-import { streamChat } from '../services/ollama';
 
 ChartJS.register(
   CategoryScale,

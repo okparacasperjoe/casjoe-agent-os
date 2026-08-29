@@ -84,6 +84,118 @@ export const initializeDatabase = async () => {
   }
 };
 
+/**
+ * Dumps all IndexedDB tables to a single JSON backup object.
+ */
+export async function exportDatabaseToJson() {
+  const backup = {
+    version: '1.0.2',
+    timestamp: new Date().toISOString(),
+    appName: 'Casjoe Agent OS',
+    tables: {
+      customers: await db.customers.toArray(),
+      invoices: await db.invoices.toArray(),
+      inventory: await db.inventory.toArray(),
+      documents: await db.documents.toArray(),
+      settings: await db.settings.toArray(),
+      agentTasks: await db.agentTasks.toArray(),
+      agentMemory: await db.agentMemory.toArray(),
+      projects: await db.projects.toArray(),
+      tasks: await db.tasks.toArray()
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `casjoe_os_backup_${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  return { success: true, count: Object.keys(backup.tables).length };
+}
+
+/**
+ * Restores all IndexedDB tables from a valid JSON backup object.
+ */
+export async function importDatabaseFromJson(jsonString) {
+  try {
+    const backup = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+    if (!backup || !backup.tables) {
+      throw new Error('Invalid Casjoe OS backup format.');
+    }
+
+    await db.transaction('rw', [
+      db.customers, db.invoices, db.inventory, db.documents,
+      db.settings, db.agentTasks, db.agentMemory, db.projects, db.tasks
+    ], async () => {
+      if (backup.tables.customers) {
+        await db.customers.clear();
+        await db.customers.bulkAdd(backup.tables.customers);
+      }
+      if (backup.tables.invoices) {
+        await db.invoices.clear();
+        await db.invoices.bulkAdd(backup.tables.invoices);
+      }
+      if (backup.tables.inventory) {
+        await db.inventory.clear();
+        await db.inventory.bulkAdd(backup.tables.inventory);
+      }
+      if (backup.tables.documents) {
+        await db.documents.clear();
+        await db.documents.bulkAdd(backup.tables.documents);
+      }
+      if (backup.tables.settings) {
+        await db.settings.clear();
+        await db.settings.bulkAdd(backup.tables.settings);
+      }
+      if (backup.tables.agentTasks) {
+        await db.agentTasks.clear();
+        await db.agentTasks.bulkAdd(backup.tables.agentTasks);
+      }
+      if (backup.tables.agentMemory) {
+        await db.agentMemory.clear();
+        await db.agentMemory.bulkAdd(backup.tables.agentMemory);
+      }
+      if (backup.tables.projects) {
+        await db.projects.clear();
+        await db.projects.bulkAdd(backup.tables.projects);
+      }
+      if (backup.tables.tasks) {
+        await db.tasks.clear();
+        await db.tasks.bulkAdd(backup.tables.tasks);
+      }
+    });
+
+    return { success: true, message: 'Database successfully restored.' };
+  } catch (err) {
+    console.error('Database restore failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+/**
+ * Automatically prunes old agent tasks to prevent quota bloat.
+ */
+export async function pruneOldAgentLogs(keepLatestCount = 100) {
+  try {
+    const total = await db.agentTasks.count();
+    if (total > keepLatestCount) {
+      const allTasks = await db.agentTasks.orderBy('id').toArray();
+      const toDelete = allTasks.slice(0, total - keepLatestCount);
+      const deleteIds = toDelete.map(t => t.id);
+      await db.agentTasks.bulkDelete(deleteIds);
+      return { success: true, deletedCount: deleteIds.length };
+    }
+    return { success: true, deletedCount: 0 };
+  } catch (err) {
+    console.error('Pruning error:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 // Run initialization
 initializeDatabase();
 

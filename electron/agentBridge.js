@@ -1,8 +1,8 @@
-import { exec, spawn } from 'child_process';
+import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { ipcMain, desktopCapturer } from 'electron';
+import { ipcMain } from 'electron';
 
 /**
  * Casjoe Agent OS - Electron Desktop Bridge

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Sparkles, WifiOff, ShieldCheck, Zap, Laptop, Lock, Check, Paperclip, Loader2 } from 'lucide-react';
+import { Send, Sparkles, WifiOff, ShieldCheck, Zap, Paperclip, Loader2 } from 'lucide-react';
 import { streamChat, agentChat } from '../services/ollama';
 import { addChatMessage, useChatMessages } from '../db/hooks';
 import { PROMPT_LIBRARY } from '../data/prompts';
@@ -16,7 +16,6 @@ export default function ChatView({ selectedModel, ollamaConnected, activePrompt,
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [streamingText, setStreamingText] = useState('');
-  const [useLocalDocs, setUseLocalDocs] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -27,7 +26,7 @@ export default function ChatView({ selectedModel, ollamaConnected, activePrompt,
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamingText, isGenerating]);
+  }, [messages.length, streamingText, isGenerating]);
 
   // Handle incoming activePrompt from the Prompt Library tab
   useEffect(() => {

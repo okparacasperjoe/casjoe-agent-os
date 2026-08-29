@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Sparkles, Cpu, Terminal, History, Shield, Zap, FileText } from 'lucide-react';
+import { Play, Cpu, Terminal, Shield, Zap, FileText } from 'lucide-react';
 import AgentCanvas from './AgentCanvas';
 import ActionApprovalModal from './ActionApprovalModal';
 import TaskResultModal from './TaskResultModal';
@@ -211,7 +211,7 @@ export default function AgentOSView({ onNavigateTab }) {
       </div>
 
       {/* Multi-Agent Live Team Canvas */}
-      <AgentCanvas activeAgents={activeAgents} currentGoal={goal} />
+      <AgentCanvas activeAgents={activeAgents} currentGoal={goal} qaScore={taskResult?.qaScore} />
 
       {/* Live Execution Feed */}
       <div className="bg-[#0B1222] border border-slate-800/80 rounded-2xl p-4 space-y-3 flex flex-col min-h-[220px]">

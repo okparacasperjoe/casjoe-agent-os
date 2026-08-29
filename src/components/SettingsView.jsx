@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, Cpu, HardDrive, Sliders, CheckCircle, ShieldCheck, Zap, Battery, AlertTriangle, ExternalLink, Download, RefreshCw, Key, Star, ArrowUpCircle } from 'lucide-react';
-import { listModels, pullModel, checkOllamaConnection, RECOMMENDED_MODELS } from '../services/ollama';
+import React, { useState, useEffect, useRef } from 'react';
+import { Settings, Cpu, HardDrive, Sliders, CheckCircle, ShieldCheck, Battery, AlertTriangle, Download, RefreshCw, Key, Star, Upload, Trash2, ArrowUpCircle } from 'lucide-react';
+import { pullModel, RECOMMENDED_MODELS } from '../services/ollama';
 import { setSetting } from '../db/hooks';
-import db from '../db/database';
+import db, { exportDatabaseToJson, importDatabaseFromJson, pruneOldAgentLogs } from '../db/database';
 
 // ipcRenderer is available when running inside Electron (contextIsolation: false)
 const ipc = window.require ? window.require('electron').ipcRenderer : null;
-
 
 export default function SettingsView({ ollamaConnected, ollamaModels, selectedModel, setSelectedModel }) {
   const [quantization, setQuantization] = useState('Q4_K_M');
@@ -15,6 +14,8 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
   const [powerSaver, setPowerSaver] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [pullProgress, setPullProgress] = useState({});
+  const [backupMsg, setBackupMsg] = useState('');
+  const restoreFileInputRef = useRef(null);
 
   // License key state
   const [licenseKey, setLicenseKey] = useState('');
@@ -53,7 +54,7 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
       if (valid) {
         await setSetting('licenseKey', { key: licenseKey.trim().toUpperCase(), email: licenseEmail, status: 'valid' });
       }
-    } catch (e) {
+    } catch {
       setLicenseStatus('invalid');
     }
   };
@@ -77,7 +78,6 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
   // ERP API Token State
   const [erpApiToken, setErpApiToken] = useState('');
 
-
   // Load token on mount
   React.useEffect(() => {
     db.settings.get('erpApiToken').then(record => {
@@ -90,11 +90,14 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
     alert('ERP API token saved');
   };
 
-  // Business Profile State
+  // Business Profile State (for Invoices, Reports & Browser AutoFill)
   const [businessName, setBusinessName] = useState('');
   const [businessPhone, setBusinessPhone] = useState('');
   const [businessEmail, setBusinessEmail] = useState('');
   const [businessBank, setBusinessBank] = useState('');
+  const [businessAddress, setBusinessAddress] = useState('');
+  const [businessRcTin, setBusinessRcTin] = useState('');
+  const [businessWebsite, setBusinessWebsite] = useState('');
 
   // Load existing profile on mount
   React.useEffect(() => {
@@ -104,6 +107,9 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
         setBusinessPhone(record.value.phone || '');
         setBusinessEmail(record.value.email || '');
         setBusinessBank(record.value.bank || '');
+        setBusinessAddress(record.value.address || '');
+        setBusinessRcTin(record.value.rcTin || '');
+        setBusinessWebsite(record.value.website || '');
       }
     });
   }, []);
@@ -113,7 +119,10 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
       name: businessName,
       phone: businessPhone,
       email: businessEmail,
-      bank: businessBank
+      bank: businessBank,
+      address: businessAddress,
+      rcTin: businessRcTin,
+      website: businessWebsite
     });
 
     setSavedSuccess(true);
@@ -122,25 +131,38 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
 
   const handleExportDatabase = async () => {
     try {
-      const exportData = {
-        customers: await db.customers.toArray(),
-        invoices: await db.invoices.toArray(),
-        chatMessages: await db.chatMessages.toArray(),
-        documents: await db.documents.toArray(),
-        settings: await db.settings.toArray(),
-        exportDate: new Date().toISOString()
-      };
-      
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Casjoe_Offline_Backup_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await exportDatabaseToJson();
+      setBackupMsg('Backup downloaded successfully!');
+      setTimeout(() => setBackupMsg(''), 3500);
     } catch (error) {
       console.error('Failed to export database', error);
       alert('Backup failed.');
+    }
+  };
+
+  const handleRestoreFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const res = await importDatabaseFromJson(text);
+      if (res.success) {
+        setBackupMsg('Database restored successfully! Reloading...');
+        setTimeout(() => window.location.reload(), 1200);
+      } else {
+        alert(`Restore failed: ${res.error}`);
+      }
+    } catch (err) {
+      alert(`Invalid backup file: ${err.message}`);
+    }
+  };
+
+  const handlePruneLogs = async () => {
+    if (confirm('Prune task logs to retain only the latest 100 entries?')) {
+      const res = await pruneOldAgentLogs(100);
+      setBackupMsg(`Cleaned up ${res.deletedCount} old log entries.`);
+      setTimeout(() => setBackupMsg(''), 3500);
     }
   };
 
@@ -260,7 +282,42 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
               className="w-full bg-[#111A30] border border-white/5 rounded-xl py-2 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF9F00]/50"
             />
           </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-300">Physical Address (For AutoFill & Invoices)</label>
+            <input 
+              type="text" 
+              value={businessAddress}
+              onChange={(e) => setBusinessAddress(e.target.value)}
+              placeholder="e.g. 14 Admiralty Way, Lekki Phase 1, Lagos"
+              className="w-full bg-[#111A30] border border-white/5 rounded-xl py-2 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF9F00]/50"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-300">RC Number / TIN (Tax ID)</label>
+            <input 
+              type="text" 
+              value={businessRcTin}
+              onChange={(e) => setBusinessRcTin(e.target.value)}
+              placeholder="RC-1928301 / TIN-0091823"
+              className="w-full bg-[#111A30] border border-white/5 rounded-xl py-2 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF9F00]/50"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-300">Official Website URL</label>
+            <input 
+              type="url" 
+              value={businessWebsite}
+              onChange={(e) => setBusinessWebsite(e.target.value)}
+              placeholder="https://casjoe.com"
+              className="w-full bg-[#111A30] border border-white/5 rounded-xl py-2 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF9F00]/50"
+            />
+          </div>
         </div>
+
+        <button onClick={handleSaveSettings} className="btn-primary text-xs py-2.5 px-5 mt-3 flex items-center gap-1.5">
+          <CheckCircle className="w-3.5 h-3.5" />
+          <span>Save Business Profile</span>
+        </button>
       </div>
 
       <div className="space-y-2 mt-4">
@@ -508,25 +565,84 @@ export default function SettingsView({ ollamaConnected, ollamaModels, selectedMo
         </div>
       </div>
 
-      {/* Offline Data Management */}
+      {/* Offline Data Management & Disaster Recovery */}
       <div className="bg-[#0E1629] border border-white/10 p-6 rounded-2xl space-y-4">
-        <h3 className="font-bold text-white font-['Outfit'] text-base border-b border-white/10 pb-3">
-          Offline Data Management & Backup
-        </h3>
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <h3 className="font-bold text-white font-['Outfit'] text-base flex items-center gap-2">
+            <HardDrive className="w-5 h-5 text-amber-500" />
+            <span>Offline Data Management &amp; Disaster Recovery</span>
+          </h3>
+          {backupMsg && (
+            <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 animate-pulse">
+              {backupMsg}
+            </span>
+          )}
+        </div>
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h4 className="text-sm font-bold text-white">Full System Backup</h4>
-            <p className="text-xs text-slate-400">Export your entire local IndexedDB (CRM, Invoices, Chat History, Settings) to a single JSON file. Save this to a USB drive for disaster recovery.</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          {/* Card 1: Export */}
+          <div className="bg-[#0A0F1D] border border-white/5 p-4 rounded-xl space-y-3 flex flex-col justify-between">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Download className="w-4 h-4 text-amber-400" />
+                <span>Export System Backup</span>
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Download a full JSON snapshot of your customers, invoices, inventory, documents, and memory.
+              </p>
+            </div>
+            <button 
+              onClick={handleExportDatabase}
+              className="w-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition"
+            >
+              <Download className="w-4 h-4" /> Export Backup File
+            </button>
           </div>
-          
-          <button 
-            onClick={handleExportDatabase}
-            className="bg-[#1F2937] hover:bg-[#374151] border border-gray-700 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 whitespace-nowrap cursor-pointer"
-          >
-            <HardDrive className="w-4 h-4 text-amber-500" />
-            Export Backup to USB
-          </button>
+
+          {/* Card 2: Restore */}
+          <div className="bg-[#0A0F1D] border border-white/5 p-4 rounded-xl space-y-3 flex flex-col justify-between">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Upload className="w-4 h-4 text-sky-400" />
+                <span>Restore from Backup</span>
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Restore database from a previous `.json` backup file on this machine or a new laptop.
+              </p>
+            </div>
+            <input 
+              type="file" 
+              ref={restoreFileInputRef}
+              onChange={handleRestoreFile}
+              accept=".json"
+              className="hidden" 
+            />
+            <button 
+              onClick={() => restoreFileInputRef.current?.click()}
+              className="w-full bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-400 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition"
+            >
+              <Upload className="w-4 h-4" /> Select Backup JSON
+            </button>
+          </div>
+
+          {/* Card 3: Storage Maintenance */}
+          <div className="bg-[#0A0F1D] border border-white/5 p-4 rounded-xl space-y-3 flex flex-col justify-between">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Trash2 className="w-4 h-4 text-rose-400" />
+                <span>Prune Old Agent Logs</span>
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Auto-prune old task logs while keeping the latest 100 entries to optimize local storage.
+              </p>
+            </div>
+            <button 
+              onClick={handlePruneLogs}
+              className="w-full bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition"
+            >
+              <Trash2 className="w-4 h-4" /> Prune Storage Logs
+            </button>
+          </div>
         </div>
       </div>
 

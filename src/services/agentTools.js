@@ -99,6 +99,94 @@ export const AGENT_TOOL_DEFINITIONS = [
       },
       required: ['query']
     }
+  },
+  {
+    name: 'save_document_knowledge',
+    description: 'Save extracted text, articles, or notes into the local Document Vault for offline RAG search.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Title or filename of the document.' },
+        content: { type: 'string', description: 'Extracted text or knowledge content.' },
+        type: { type: 'string', description: 'File type (txt, pdf, docx, web).' },
+        category: { type: 'string', description: 'Category (Business, Scrape, Finance, Legal).' }
+      },
+      required: ['name', 'content']
+    }
+  },
+  {
+    name: 'update_inventory_stock',
+    description: 'Update quantity of an existing product or add a new inventory product in the local database.',
+    parameters: {
+      type: 'object',
+      properties: {
+        sku: { type: 'string', description: 'Product SKU / identifier (e.g. PRD-001).' },
+        name: { type: 'string', description: 'Product title / name.' },
+        quantity: { type: 'number', description: 'Quantity in stock or delta to adjust.' },
+        price: { type: 'string', description: 'Price per unit string (e.g. ₦15,000).' },
+        category: { type: 'string', description: 'Product category.' }
+      },
+      required: ['name', 'quantity']
+    }
+  },
+  {
+    name: 'query_document_rag',
+    description: 'Query the local Document Vault using semantic keyword search to find reference excerpts and citations.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'The question or keyword to search across uploaded documents.' }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'generate_business_report',
+    description: 'Generate an executive business intelligence summary (Sales, CRM, Inventory, or Strategy) and export as a local Markdown report.',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Report title.' },
+        reportType: { type: 'string', description: 'Type: sales | financial | inventory | executive | strategic' },
+        content: { type: 'string', description: 'The structured markdown report body.' },
+        filename: { type: 'string', description: 'Target filename (e.g. monthly_sales_report.md).' }
+      },
+      required: ['title', 'content']
+    }
+  },
+  {
+    name: 'manage_crm_note',
+    description: 'Add an interaction note, proposal link, or next step to an existing customer record in CRM.',
+    parameters: {
+      type: 'object',
+      properties: {
+        customerName: { type: 'string', description: 'Customer or company name.' },
+        note: { type: 'string', description: 'Meeting note, status update, or follow-up task.' }
+      },
+      required: ['customerName', 'note']
+    }
+  },
+  {
+    name: 'get_system_health',
+    description: 'Fetch system health, RAM usage, CPU cores, OS platform, and local AI runtime status.',
+    parameters: {
+      type: 'object',
+      properties: {}
+    }
+  },
+  {
+    name: 'manage_pos_transaction',
+    description: 'Record an instant Point-of-Sale transaction, deduct stock, and generate a printable receipt.',
+    parameters: {
+      type: 'object',
+      properties: {
+        customerName: { type: 'string', description: 'Customer name or Walk-in Customer.' },
+        items: { type: 'string', description: 'Itemized description of products purchased.' },
+        totalAmount: { type: 'string', description: 'Grand total amount string (e.g. ₦45,000).' },
+        paymentMethod: { type: 'string', description: 'Payment method: Cash | Transfer | Card | POS' }
+      },
+      required: ['totalAmount', 'items']
+    }
   }
 ];
 
@@ -124,12 +212,20 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
 
     switch (normalizedTool) {
       case 'run_terminal_command': {
+        const isDangerous = args.command && (args.command.includes('rm') || args.command.includes('del') || args.command.includes('sudo') || args.command.includes('format') || args.command.includes('npm i') || args.command.includes('pip install'));
+        if (onRequestApproval && isDangerous) {
+          const approved = await onRequestApproval({
+            category: 'TERMINAL_COMMAND',
+            risk: 'Critical',
+            title: 'Elevated Shell Execution Request',
+            command: args.command,
+            cwd: args.cwd || 'Current Working Directory',
+            details: `Agent is requesting to run terminal command: "${args.command}"`
+          });
+          if (!approved) return { error: 'Execution blocked: user denied terminal privilege approval.' };
+        }
+
         if (window.electron && window.electron.ipcRenderer) {
-          // Check for unsafe patterns or request user approval if callback provided
-          if (onRequestApproval && (args.command.includes('rm') || args.command.includes('del') || args.command.includes('sudo'))) {
-            const approved = await onRequestApproval({ type: 'terminal', command: args.command });
-            if (!approved) return { error: 'Execution cancelled by user approval policy.' };
-          }
           const res = await window.electron.ipcRenderer.invoke('agent:run-command', args);
           return res;
         } else {
@@ -138,6 +234,18 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
       }
 
       case 'write_local_file': {
+        const isSensitive = args.filePath && (args.filePath.endsWith('.json') || args.filePath.endsWith('.env') || args.filePath.includes('config') || args.filePath.endsWith('.ps1') || args.filePath.endsWith('.bat'));
+        if (onRequestApproval && isSensitive) {
+          const approved = await onRequestApproval({
+            category: 'FILE_OVERWRITE',
+            risk: 'Moderate',
+            title: 'Sensitive File Modification',
+            filePath: args.filePath,
+            details: `Agent is writing to project configuration file: ${args.filePath}`
+          });
+          if (!approved) return { error: 'File write cancelled by user security policy.' };
+        }
+
         if (window.electron && window.electron.ipcRenderer) {
           return await window.electron.ipcRenderer.invoke('agent:write-file', args);
         } else {
@@ -176,6 +284,20 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
       }
 
       case 'create_finance_invoice': {
+        const numericAmt = parseFloat((args.amount || '0').replace(/[^0-9.]/g, '')) || 0;
+        if (onRequestApproval && numericAmt >= 500000) {
+          const approved = await onRequestApproval({
+            category: 'HIGH_VALUE_FINANCE',
+            risk: 'High',
+            title: 'High-Value Invoice Approval',
+            customer: args.customer,
+            amount: args.amount,
+            items: args.items || 'Casjoe Agent Execution Services',
+            details: `Agent is issuing a high-value invoice of ${args.amount} for ${args.customer}.`
+          });
+          if (!approved) return { error: 'Transaction cancelled: user denied high-value invoice approval.' };
+        }
+
         const now = new Date().toISOString();
         const count = await db.invoices.count();
         const invId = `INV-2026-${(count + 1).toString().padStart(3, '0')}`;
@@ -192,6 +314,131 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
         return { success: true, id, invoiceId: invId, customer: args.customer, amount: args.amount };
       }
 
+      case 'update_inventory_stock': {
+        const existing = await db.inventory.where('name').equalsIgnoreCase(args.name).first();
+        if (existing) {
+          const newQty = (parseInt(existing.quantity || '0', 10) + parseInt(args.quantity || '0', 10)).toString();
+          await db.inventory.update(existing.id, {
+            quantity: newQty,
+            price: args.price || existing.price,
+            category: args.category || existing.category
+          });
+          return { success: true, action: 'updated', product: args.name, newQuantity: newQty };
+        } else {
+          const sku = args.sku || `SKU-${Date.now().toString().slice(-4)}`;
+          const id = await db.inventory.add({
+            sku,
+            name: args.name,
+            quantity: (args.quantity || 1).toString(),
+            price: args.price || '₦5,000',
+            category: args.category || 'General',
+            status: 'In Stock'
+          });
+          return { success: true, action: 'created', productId: id, sku, product: args.name, quantity: args.quantity };
+        }
+      }
+
+      case 'query_document_rag': {
+        const allDocs = await db.documents.toArray();
+        const queryTerms = (args.query || '').toLowerCase().split(/\s+/).filter(t => t.length > 2);
+        const matches = [];
+
+        for (const doc of allDocs) {
+          const text = doc.content || doc.summary || '';
+          const paragraphs = text.split(/\n\n+/).filter(p => p.length > 20);
+
+          paragraphs.forEach((p, idx) => {
+            let score = 0;
+            if (p.toLowerCase().includes((args.query || '').toLowerCase())) score += 10;
+            queryTerms.forEach(term => {
+              if (p.toLowerCase().includes(term)) score += 2;
+            });
+            if (score > 0) {
+              matches.push({
+                docName: doc.name,
+                snippet: p.slice(0, 200),
+                score
+              });
+            }
+          });
+        }
+
+        matches.sort((a, b) => b.score - a.score);
+        return {
+          success: true,
+          query: args.query,
+          matchCount: matches.length,
+          topExcerpts: matches.slice(0, 3)
+        };
+      }
+
+      case 'generate_business_report': {
+        const filename = args.filename || `report_${Date.now().toString().slice(-4)}.md`;
+        const contentWithHeader = `# ${args.title || 'Executive Business Report'}\n\n*Generated by Casjoe Agent OS on ${new Date().toLocaleString()}*\n\n---\n\n${args.content}\n`;
+
+        // Save into Document Vault
+        await db.documents.add({
+          name: filename,
+          size: `${Math.round(contentWithHeader.length / 1024 * 10) / 10} KB`,
+          type: 'txt',
+          content: contentWithHeader,
+          summary: contentWithHeader.slice(0, 180) + '...',
+          createdAt: new Date().toISOString()
+        });
+
+        // Write to local disk if running in Electron
+        if (window.electron && window.electron.ipcRenderer) {
+          await window.electron.ipcRenderer.invoke('agent:write-file', {
+            filePath: filename,
+            content: contentWithHeader
+          });
+        }
+
+        return { success: true, title: args.title, filename, reportLength: contentWithHeader.length };
+      }
+
+      case 'manage_crm_note': {
+        const customer = await db.customers.where('name').equalsIgnoreCase(args.customerName).first();
+        if (customer) {
+          const timestamp = new Date().toLocaleDateString();
+          const existingNotes = customer.notes || '';
+          const updatedNotes = existingNotes ? `${existingNotes}\n[${timestamp}]: ${args.note}` : `[${timestamp}]: ${args.note}`;
+          await db.customers.update(customer.id, { notes: updatedNotes });
+          return { success: true, customer: customer.name, noteAdded: args.note };
+        } else {
+          return { success: false, error: `Customer "${args.customerName}" not found in CRM.` };
+        }
+      }
+
+      case 'get_system_health': {
+        let sysInfo = { platform: 'web', ram: 'Browser Environment' };
+        if (window.electron && window.electron.ipcRenderer) {
+          sysInfo = await window.electron.ipcRenderer.invoke('agent:get-system-info');
+        }
+        return {
+          success: true,
+          system: sysInfo,
+          timestamp: new Date().toISOString(),
+          status: 'Healthy & Operational'
+        };
+      }
+
+      case 'manage_pos_transaction': {
+        const count = await db.invoices.count();
+        const generatedId = `POS-${new Date().getFullYear()}-${(count + 1).toString().padStart(3, '0')}`;
+        await db.invoices.add({
+          invoiceId: generatedId,
+          customer: args.customerName || 'Walk-in Customer',
+          amount: args.totalAmount,
+          currency: 'NGN',
+          date: new Date().toISOString().split('T')[0],
+          status: 'Paid',
+          items: `POS Sale: ${args.items}`,
+          createdAt: new Date().toISOString()
+        });
+        return { success: true, invoiceId: generatedId, customer: args.customerName, total: args.totalAmount };
+      }
+
       case 'sync_casjoe_biz': {
         const result = await syncLocalDataToCasjoeBiz();
         return result;
@@ -200,6 +447,37 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
       case 'search_long_term_memory': {
         const matches = await searchMemory(args.query);
         return { success: true, query: args.query, matches };
+      }
+
+      case 'save_document_knowledge': {
+        const id = await db.documents.add({
+          name: args.name || `Web Knowledge ${new Date().toLocaleDateString()}`,
+          size: `${Math.round((args.content?.length || 0) / 1024 * 10) / 10} KB`,
+          type: args.type || 'txt',
+          content: args.content,
+          summary: args.content ? args.content.slice(0, 180) + '...' : '',
+          createdAt: new Date().toISOString()
+        });
+        return { success: true, docId: id, name: args.name };
+      }
+
+      case 'browser_automate_task': {
+        if (onRequestApproval && (args.url?.includes('facebook') || args.url?.includes('whatsapp') || args.task?.includes('post') || args.task?.includes('send') || args.task?.includes('message'))) {
+          const approved = await onRequestApproval({
+            category: 'BROWSER_TAKEOVER',
+            risk: 'Moderate',
+            title: 'Live Browser Takeover & Messaging',
+            url: args.url,
+            task: args.task,
+            details: `Agent is requesting to automate browser actions on ${args.url}: "${args.task}"`
+          });
+          if (!approved) return { error: 'Browser action cancelled by user.' };
+        }
+
+        window.dispatchEvent(new CustomEvent('casjoe:browser-task', {
+          detail: { url: args.url, task: args.task }
+        }));
+        return { success: true, url: args.url, task: args.task, note: 'Browser task dispatched' };
       }
 
       default:

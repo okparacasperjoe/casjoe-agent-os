@@ -38,7 +38,7 @@ exports.default = async function sign(config) {
     try {
       execSync('signtool.exe /?', { stdio: 'ignore' });
       signtool = 'signtool.exe';
-    } catch (_) {}
+    } catch {}
   }
 
   if (!signtool) {

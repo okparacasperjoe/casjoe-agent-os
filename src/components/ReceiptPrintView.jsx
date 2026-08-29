@@ -62,12 +62,42 @@ export default function ReceiptPrintView({ receipt }) {
           </table>
         </div>
 
-        {/* Totals */}
-        <div className="text-right mb-6">
-          <div className="flex justify-between font-bold text-base">
+        {/* Totals Breakdown */}
+        <div className="text-xs space-y-1 mb-4 border-b border-dashed border-gray-300 pb-2">
+          {receipt.subtotal && (
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>{receipt.subtotal}</span>
+            </div>
+          )}
+          {receipt.discount && receipt.discount !== '₦0' && (
+            <div className="flex justify-between text-gray-700">
+              <span>Discount:</span>
+              <span>-{receipt.discount}</span>
+            </div>
+          )}
+          {receipt.vat && receipt.vat !== '₦0' && (
+            <div className="flex justify-between">
+              <span>VAT:</span>
+              <span>{receipt.vat}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-bold text-base pt-1 border-t border-gray-300">
             <span>TOTAL:</span>
             <span>{receipt.amount}</span>
           </div>
+          {receipt.tendered && (
+            <div className="flex justify-between pt-1">
+              <span>Tendered:</span>
+              <span>{receipt.tendered}</span>
+            </div>
+          )}
+          {receipt.change && receipt.change !== '₦0' && (
+            <div className="flex justify-between font-bold">
+              <span>Change Due:</span>
+              <span>{receipt.change}</span>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

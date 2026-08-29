@@ -1,25 +1,139 @@
 import React, { useState } from 'react';
-import { FileText, Search, Upload, BookOpen, Lock, Send, Plus, Laptop, Trash2, X, Download, Edit3, Save, ShieldCheck, Sparkles, Zap } from 'lucide-react';
+import { FileText, Search, Upload, BookOpen, Lock, Send, Plus, Laptop, Trash2, X, Download, Edit3, Save, ShieldCheck, Sparkles, Zap, Copy, Check, ExternalLink, RefreshCw } from 'lucide-react';
 import { deleteDocument, updateDocument } from '../db/hooks';
 import { PRESET_QNA } from '../data/mockData';
+import { executeModelRequest } from '../services/modelManager';
 import jsPDF from 'jspdf';
 
 export default function DocumentsView({ documents = [], onOpenUploadModal }) {
   const [searchQuery, setSearchQuery] = useState("What are the key terms of the payment policy?");
   const [activeQna, setActiveQna] = useState(PRESET_QNA[0]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [copiedAnswer, setCopiedAnswer] = useState(false);
 
   // Document Modal State
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState('');
 
-  const handleSearch = (e) => {
+  // Dynamic Local RAG Search across user documents
+  const handleSearch = async (e) => {
     e?.preventDefault();
-    if (!searchQuery.trim()) return;
-    const lower = searchQuery.toLowerCase();
-    let matched = PRESET_QNA.find(q => lower.includes(q.question.toLowerCase().slice(0, 15)));
-    if (!matched) matched = PRESET_QNA[0];
-    setActiveQna(matched);
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    setIsSearching(true);
+
+    try {
+      // 1. Gather all documents with text content
+      const searchableDocs = documents.filter(d => (d.content && d.content.length > 10) || (d.summary && d.summary.length > 10));
+
+      if (searchableDocs.length === 0) {
+        // Fallback to preset mock Q&A if no custom documents are loaded
+        const lower = query.toLowerCase();
+        let matched = PRESET_QNA.find(q => lower.includes(q.question.toLowerCase().slice(0, 12)));
+        if (!matched) matched = PRESET_QNA[0];
+        setActiveQna(matched);
+        setIsSearching(false);
+        return;
+      }
+
+      // 2. Tokenize & chunk documents into semantic paragraphs
+      const queryTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 2);
+      const scoredChunks = [];
+
+      for (const doc of searchableDocs) {
+        const fullText = doc.content || doc.summary || '';
+        const paragraphs = fullText.split(/\n\n+/).filter(p => p.trim().length > 20);
+
+        paragraphs.forEach((p, idx) => {
+          const lowerP = p.toLowerCase();
+          let score = 0;
+
+          // Full query match bonus
+          if (lowerP.includes(query.toLowerCase())) score += 10;
+
+          // Term frequency match
+          queryTerms.forEach(term => {
+            if (lowerP.includes(term)) score += 2;
+          });
+
+          if (score > 0) {
+            scoredChunks.push({
+              docName: doc.name,
+              docId: doc.id,
+              page: `Chunk #${idx + 1}`,
+              snippet: p.length > 180 ? p.slice(0, 180) + '...' : p,
+              fullChunk: p,
+              score
+            });
+          }
+        });
+      }
+
+      // Sort chunks by highest relevance
+      scoredChunks.sort((a, b) => b.score - a.score);
+      const topChunks = scoredChunks.slice(0, 3);
+
+      if (topChunks.length > 0) {
+        const contextText = topChunks.map(c => `[From "${c.docName}"]: ${c.fullChunk}`).join('\n\n');
+
+        // 3. Attempt local LLM synthesis
+        let synthesizedAnswer = '';
+        try {
+          const systemPrompt = `You are Casjoe Offline Document Intelligence. Answer the user's question concisely using ONLY the provided document context excerpts. State the answer clearly in 2-3 sentences and reference the document name.`;
+          const promptPromise = executeModelRequest({
+            systemPrompt,
+            messages: [{ role: 'user', content: `Context Excerpts:\n${contextText}\n\nUser Question: "${query}"` }]
+          });
+          const timeoutPromise = new Promise(r => setTimeout(() => r({ content: null }), 3000));
+          const res = await Promise.race([promptPromise, timeoutPromise]);
+          synthesizedAnswer = res?.content;
+        } catch {
+          // Model offline or timeout fallback
+        }
+
+        if (!synthesizedAnswer || synthesizedAnswer.length < 10) {
+          synthesizedAnswer = `Based on your stored document "${topChunks[0].docName}": ${topChunks[0].snippet}`;
+        }
+
+        setActiveQna({
+          question: query,
+          answer: synthesizedAnswer,
+          sources: topChunks.map(c => ({
+            doc: c.docName,
+            snippet: c.snippet,
+            page: c.page,
+            docId: c.docId
+          }))
+        });
+
+      } else {
+        // Fallback if no matching keywords found in uploaded documents
+        setActiveQna({
+          question: query,
+          answer: `No exact matches found for "${query}" across your ${searchableDocs.length} uploaded document(s). Try searching for specific terms or upload relevant business PDFs.`,
+          sources: searchableDocs.slice(0, 2).map(d => ({
+            doc: d.name,
+            snippet: (d.summary || d.content || '').slice(0, 120) + '...',
+            page: 'General Overview'
+          }))
+        });
+      }
+
+    } catch (err) {
+      console.error('RAG search error:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleCopyAnswer = () => {
+    if (activeQna?.answer) {
+      navigator.clipboard.writeText(activeQna.answer);
+      setCopiedAnswer(true);
+      setTimeout(() => setCopiedAnswer(false), 2500);
+    }
   };
 
   const handleOpenDocument = (doc) => {
@@ -170,54 +284,100 @@ export default function DocumentsView({ documents = [], onOpenUploadModal }) {
           <div className="lg:col-span-8 space-y-5">
             {/* Search Input Bar */}
             <form onSubmit={handleSearch} className="relative">
-              <div className="flex items-center bg-[#070B15] border border-white/10 rounded-2xl p-2">
-                <Search className="w-4 h-4 text-slate-400 ml-3" />
+              <div className="flex items-center bg-[#070B15] border border-white/10 rounded-2xl p-2 focus-within:border-amber-500/60 transition">
+                <Search className={`w-4 h-4 ml-3 ${isSearching ? 'text-amber-400 animate-spin' : 'text-slate-400'}`} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="What are the key terms of the payment policy?"
-                  className="w-full bg-transparent border-none outline-none px-3 text-xs text-white placeholder-slate-500"
+                  placeholder="Ask questions across your stored documents (e.g. 'What are payment terms?')..."
+                  className="w-full bg-transparent border-none outline-none px-3 text-xs text-white placeholder-slate-500 font-medium"
                 />
-                <button type="submit" className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FF9F00] to-[#FF6B00] text-black flex items-center justify-center shrink-0">
-                  <Send className="w-3.5 h-3.5" />
+                <button 
+                  type="submit" 
+                  disabled={isSearching}
+                  className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#FF9F00] to-[#FF6B00] text-black font-bold flex items-center justify-center shrink-0 hover:brightness-110 transition disabled:opacity-50"
+                >
+                  {isSearching ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </form>
 
             {/* Glowing Orange Border AI Answer Box matching Image 3 */}
             <div className="bg-[#0C1222] border-2 border-[#FF9F00] rounded-2xl p-6 space-y-3 relative shadow-xl shadow-orange-500/10">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-[#FF9F00] text-black font-bold flex items-center justify-center text-xs">
-                  AI
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#FF9F00] text-black font-bold flex items-center justify-center text-xs">
+                    AI
+                  </div>
+                  <span className="text-xs font-bold text-[#FF9F00]">Offline Document Intelligence</span>
                 </div>
-                <span className="text-xs font-bold text-[#FF9F00]">Offline AI Answer</span>
+
+                <button
+                  onClick={handleCopyAnswer}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-[11px] font-semibold transition border border-white/5"
+                  title="Copy Answer Text"
+                >
+                  {copiedAnswer ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="text-emerald-400">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Copy Answer</span>
+                    </>
+                  )}
+                </button>
               </div>
+
               <p className="text-sm text-slate-100 leading-relaxed font-medium">
-                {activeQna?.answer}
+                {isSearching ? (
+                  <span className="text-slate-400 animate-pulse flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-400 animate-spin" />
+                    Scanning local document indexes and synthesizing answer...
+                  </span>
+                ) : (
+                  activeQna?.answer
+                )}
               </p>
             </div>
 
             {/* Cited Sources Box matching Image 3 */}
             <div className="bg-[#070B15] border border-white/10 rounded-2xl p-4 space-y-3">
-              <div className="flex items-center gap-2 border-b border-white/10 pb-2 text-xs font-bold text-white">
-                <BookOpen className="w-4 h-4 text-sky-400" />
-                <span>Sources</span>
+              <div className="flex items-center justify-between border-b border-white/10 pb-2 text-xs font-bold text-white">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-sky-400" />
+                  <span>Document Sources &amp; References</span>
+                </div>
+                <span className="text-[10px] text-slate-400 font-normal">
+                  {activeQna?.sources?.length || 0} reference chunk(s)
+                </span>
               </div>
 
               <div className="space-y-2">
-                {activeQna?.sources?.map((src, index) => (
-                  <div key={index} className="bg-[#0C1222] border border-white/5 p-3 rounded-xl flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[#FF9F00]" />
-                      <span className="font-bold text-white">{src.doc}</span>
-                      <span className="text-slate-400 text-[11px]">— {src.snippet}</span>
+                {activeQna?.sources?.map((src, index) => {
+                  const matchingDoc = documents.find(d => d.name === src.doc || d.id === src.docId);
+                  return (
+                    <div 
+                      key={index} 
+                      onClick={() => matchingDoc && handleOpenDocument(matchingDoc)}
+                      className={`bg-[#0C1222] border border-white/5 p-3 rounded-xl flex items-center justify-between text-xs transition ${matchingDoc ? 'hover:border-amber-500/40 cursor-pointer group' : ''}`}
+                    >
+                      <div className="flex items-center gap-2 overflow-hidden pr-2">
+                        <FileText className="w-4 h-4 text-[#FF9F00] shrink-0" />
+                        <div className="truncate">
+                          <span className="font-bold text-white group-hover:text-amber-400 transition-colors mr-2">{src.doc}</span>
+                          <span className="text-slate-400 text-[11px]">— {src.snippet}</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold bg-amber-500/10 text-[#FF9F00] px-2 py-0.5 rounded-md border border-amber-500/20 shrink-0">
+                        {src.page}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-bold bg-amber-500/10 text-[#FF9F00] px-2 py-0.5 rounded-md border border-amber-500/20">
-                      {src.page}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

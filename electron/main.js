@@ -13,8 +13,22 @@ const __dirname = path.dirname(__filename);
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
+let mainWindow = null;
+
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 function createWindow() {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 1024,
@@ -67,6 +81,19 @@ function createWindow() {
       delete responseHeaders['Content-Security-Policy'];
       callback({ cancel: false, responseHeaders });
     });
+
+    // Handle seamless file downloads in browser session
+    sess.on('will-download', (event, item) => {
+      item.once('done', (e, state) => {
+        if (state === 'completed' && mainWindow) {
+          mainWindow.webContents.send('browser:download-completed', {
+            filename: item.getFilename(),
+            savePath: item.getSavePath(),
+            size: item.getTotalBytes()
+          });
+        }
+      });
+    });
   });
 
   // URLs that Google / Microsoft / Apple block in embedded webviews.
@@ -82,7 +109,7 @@ function createWindow() {
   ];
   const isAuthUrl = (url) => {
     try {
-      const { hostname, pathname } = new URL(url);
+      const { hostname } = new URL(url);
       return AUTH_HOSTNAMES.some(h => hostname === h || url.includes(h));
     } catch { return false; }
   };
@@ -98,7 +125,7 @@ function createWindow() {
   });
 
   // Also intercept webview will-navigate events for auth pages
-  mainWindow.webContents.on('will-attach-webview', (event, webPreferences, params) => {
+  mainWindow.webContents.on('will-attach-webview', (event, webPreferences) => {
     // Ensure webview uses the browser partition user-agent
     webPreferences.partition = 'persist:casjoe_agent_browser';
   });

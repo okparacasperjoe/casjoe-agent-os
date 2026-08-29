@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, FileText, Plus, DollarSign, ArrowUpRight, CheckCircle2, Clock, Sparkles, Trash2, Printer } from 'lucide-react';
+import { CreditCard, FileText, Plus, DollarSign, ArrowUpRight, CheckCircle2, Trash2, Printer } from 'lucide-react';
 import { deleteInvoice } from '../db/hooks';
 import InvoicePrintView from './InvoicePrintView';
 

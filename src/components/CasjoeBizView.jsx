@@ -3,7 +3,7 @@ import { Globe, RefreshCw, ExternalLink, ShieldCheck, Database, Key, Check } fro
 import { getCasjoeBizUrl, checkCasjoeBizStatus, syncLocalDataToCasjoeBiz, getCasjoeBizApiKey, setCasjoeBizApiKey } from '../services/casjoeBizSync';
 
 export default function CasjoeBizView() {
-  const [bizUrl, setBizUrl] = useState(getCasjoeBizUrl());
+  const bizUrl = getCasjoeBizUrl();
   const [status, setStatus] = useState({ online: false, note: 'Checking portal connection...' });
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');

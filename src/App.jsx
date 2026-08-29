@@ -1,29 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
-import AgentOSView from './components/AgentOSView';
-import AgentBrowserView from './components/AgentBrowserView';
-import CasjoeBizView from './components/CasjoeBizView';
-import ERPView from './components/ERPView';
-import PerformanceView from './components/PerformanceView';
-import DocumentsView from './components/DocumentsView';
-import ChatView from './components/ChatView';
-import CRMView from './components/CRMView';
-import FinanceView from './components/FinanceView';
-import SettingsView from './components/SettingsView';
-import InventoryView from './components/InventoryView';
-import POSView from './components/POSView';
-import PromptsView from './components/PromptsView';
+import ErrorBoundary from './components/ErrorBoundary';
 import Modals from './components/Modals';
 import OnboardingWizard from './components/OnboardingWizard';
 import { useCustomers, useInvoices, useDocuments, useInventory, useStats } from './db/hooks';
-import { checkOllamaConnection, listModels, RECOMMENDED_MODELS } from './services/ollama';
+import { checkOllamaConnection, listModels } from './services/ollama';
 import { syncAll } from './services/erpSync';
+
+// Lazy-loaded workspace components for code-splitting and faster startup
+const AgentOSView = lazy(() => import('./components/AgentOSView'));
+const AgentBrowserView = lazy(() => import('./components/AgentBrowserView'));
+const CasjoeBizView = lazy(() => import('./components/CasjoeBizView'));
+const DashboardView = lazy(() => import('./components/DashboardView'));
+const PerformanceView = lazy(() => import('./components/PerformanceView'));
+const DocumentsView = lazy(() => import('./components/DocumentsView'));
+const PromptsView = lazy(() => import('./components/PromptsView'));
+const ChatView = lazy(() => import('./components/ChatView'));
+const CRMView = lazy(() => import('./components/CRMView'));
+const FinanceView = lazy(() => import('./components/FinanceView'));
+const InventoryView = lazy(() => import('./components/InventoryView'));
+const POSView = lazy(() => import('./components/POSView'));
+const ERPView = lazy(() => import('./components/ERPView'));
+const SettingsView = lazy(() => import('./components/SettingsView'));
+
+function TabLoader() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] space-y-3 text-slate-400">
+      <div className="w-8 h-8 rounded-full border-2 border-amber-500 border-t-transparent animate-spin"></div>
+      <span className="text-xs font-mono">Loading Casjoe Workspace Module...</span>
+    </div>
+  );
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('agent-os');
-  const [ramUsage, setRamUsage] = useState(5.8);
-  const [cpuUsage, setCpuUsage] = useState(38);
+  const [ramUsage, setRamUsage] = useState(4.2);
+  const [cpuUsage, setCpuUsage] = useState(24);
 
   const [ollamaConnected, setOllamaConnected] = useState(false);
   const [ollamaModels, setOllamaModels] = useState([]);
@@ -48,8 +61,7 @@ export default function App() {
     return localStorage.getItem('theme') !== 'light';
   });
 
-
-
+  // Background ERP Sync on Network Reconnect
   useEffect(() => {
     const handleOnline = async () => {
       try {
@@ -61,6 +73,50 @@ export default function App() {
     };
     window.addEventListener('online', handleOnline);
     return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
+  // Ollama Connection Heartbeat & Model Listing
+  useEffect(() => {
+    let isMounted = true;
+    const pollOllama = async () => {
+      try {
+        const res = await checkOllamaConnection();
+        if (isMounted) {
+          setOllamaConnected(res.connected);
+          if (res.connected) {
+            const models = await listModels();
+            if (isMounted && models.length > 0) {
+              setOllamaModels(models);
+              if (!selectedModel) setSelectedModel(models[0].name);
+            }
+          }
+        }
+      } catch {
+        if (isMounted) setOllamaConnected(false);
+      }
+    };
+
+    pollOllama();
+    const interval = setInterval(pollOllama, 10000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [selectedModel]);
+
+  // Read System Resources via Electron IPC if available
+  useEffect(() => {
+    if (window.electron && window.electron.ipcRenderer) {
+      window.electron.ipcRenderer.invoke('agent:get-system-info').then(info => {
+        if (info?.freeMemory && info?.totalMemory) {
+          const usedGb = ((info.totalMemory - info.freeMemory) / (1024 * 1024 * 1024)).toFixed(1);
+          setRamUsage(parseFloat(usedGb));
+        }
+        if (info?.cpuCount) {
+          setCpuUsage(Math.min(95, info.cpuCount * 8));
+        }
+      }).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
@@ -108,101 +164,110 @@ export default function App() {
         {/* Navigation Sidebar */}
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        {/* Content Workspace Area */}
+        {/* Content Workspace Area with Lazy Loading & Error Isolation */}
         <main className="flex-1 bg-[#0A0F1D] overflow-y-auto pb-12">
-          {activeTab === 'agent-os' && (
-            <AgentOSView onNavigateTab={setActiveTab} />
-          )}
+          <ErrorBoundary>
+            <Suspense fallback={<TabLoader />}>
+              {activeTab === 'agent-os' && (
+                <AgentOSView onNavigateTab={setActiveTab} />
+              )}
 
-          {activeTab === 'agent-browser' && (
-            <AgentBrowserView />
-          )}
+              {activeTab === 'agent-browser' && (
+                <AgentBrowserView />
+              )}
 
-          {activeTab === 'casjoe-biz' && (
-            <CasjoeBizView />
-          )}
+              {activeTab === 'casjoe-biz' && (
+                <CasjoeBizView />
+              )}
 
-          {activeTab === 'dashboard' && (
-            <DashboardView
-              stats={stats}
-              onOpenModal={(modalName) => setActiveModal(modalName)}
-            />
-          )}
+              {activeTab === 'dashboard' && (
+                <DashboardView
+                  stats={stats}
+                  onOpenModal={(modalName) => setActiveModal(modalName)}
+                />
+              )}
 
-          {activeTab === 'performance' && (
-            <PerformanceView
-              currentModel={selectedModel}
-              ramUsage={ramUsage}
-              cpuUsage={cpuUsage}
-            />
-          )}
+              {activeTab === 'performance' && (
+                <PerformanceView
+                  currentModel={selectedModel}
+                  ramUsage={ramUsage}
+                  cpuUsage={cpuUsage}
+                />
+              )}
 
-          {activeTab === 'documents' && (
-            <DocumentsView
-              documents={documents}
-              onOpenUploadModal={() => setActiveModal('uploadDoc')}
-            />
-          )}
+              {activeTab === 'documents' && (
+                <DocumentsView
+                  documents={documents}
+                  onOpenUploadModal={() => setActiveModal('uploadDoc')}
+                />
+              )}
 
-          {activeTab === 'prompts' && (
-            <PromptsView 
-              onUsePrompt={(text) => {
-                setActivePrompt(text);
-                setActiveTab('chat');
-              }} 
-            />
-          )}
+              {activeTab === 'prompts' && (
+                <PromptsView 
+                  onUsePrompt={(text) => {
+                    setActivePrompt(text);
+                    setActiveTab('chat');
+                  }} 
+                />
+              )}
 
-          {activeTab === 'chat' && (
-            <ChatView
-              selectedModel={selectedModel}
-              ollamaConnected={ollamaConnected}
-              ramUsage={ramUsage}
-              cpuUsage={cpuUsage}
-              activePrompt={activePrompt}
-              setActivePrompt={setActivePrompt}
-            />
-          )}
+              {activeTab === 'chat' && (
+                <ChatView
+                  selectedModel={selectedModel}
+                  ollamaConnected={ollamaConnected}
+                  ramUsage={ramUsage}
+                  cpuUsage={cpuUsage}
+                  activePrompt={activePrompt}
+                  setActivePrompt={setActivePrompt}
+                />
+              )}
 
-          {activeTab === 'crm' && (
-            <CRMView
-              customers={customers}
-              onOpenAddCustomer={() => setActiveModal('addCustomer')}
-            />
-          )}
+              {activeTab === 'crm' && (
+                <CRMView
+                  customers={customers}
+                  onOpenAddCustomer={() => setActiveModal('addCustomer')}
+                />
+              )}
 
-          {activeTab === 'finance' && (
-            <FinanceView
-              invoices={invoices}
-              onOpenCreateInvoice={() => setActiveModal('createInvoice')}
-            />
-          )}
+              {activeTab === 'finance' && (
+                <FinanceView
+                  invoices={invoices}
+                  onOpenCreateInvoice={() => setActiveModal('createInvoice')}
+                />
+              )}
 
-          {activeTab === 'inventory' && (
-            <InventoryView
-              inventory={inventory}
-              onOpenAddModal={() => setActiveModal('addInventory')}
-            />
-          )}
+              {activeTab === 'inventory' && (
+                <InventoryView
+                  inventory={inventory}
+                  onOpenAddModal={() => setActiveModal('addInventory')}
+                />
+              )}
 
-          {activeTab === 'pos' && (
-            <POSView inventory={inventory} />
-          )}
+              {activeTab === 'pos' && (
+                <POSView inventory={inventory} />
+              )}
 
-          {activeTab === 'erp' && (
-            <ERPView
-              customers={customers}
-              invoices={invoices}
-              inventory={inventory}
-              onOpenAddCustomer={() => setActiveModal('addCustomer')}
-              onOpenCreateInvoice={() => setActiveModal('createInvoice')}
-              onOpenAddInventory={() => setActiveModal('addInventory')}
-            />
-          )}
+              {activeTab === 'erp' && (
+                <ERPView
+                  customers={customers}
+                  invoices={invoices}
+                  inventory={inventory}
+                  onOpenAddCustomer={() => setActiveModal('addCustomer')}
+                  onOpenCreateInvoice={() => setActiveModal('createInvoice')}
+                  onOpenAddInventory={() => setActiveModal('addInventory')}
+                />
+              )}
 
-          {activeTab === 'settings' && (
-            <SettingsView />
-          )}
+              {activeTab === 'settings' && (
+                <SettingsView 
+                  ollamaConnected={ollamaConnected}
+                  ollamaModels={ollamaModels}
+                  selectedModel={selectedModel}
+                  setSelectedModel={setSelectedModel}
+                />
+              )}
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
 
