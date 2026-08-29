@@ -252,9 +252,11 @@ export default function App() {
                   customers={customers}
                   invoices={invoices}
                   inventory={inventory}
+                  documents={documents}
                   onOpenAddCustomer={() => setActiveModal('addCustomer')}
                   onOpenCreateInvoice={() => setActiveModal('createInvoice')}
                   onOpenAddInventory={() => setActiveModal('addInventory')}
+                  onOpenUploadDoc={() => setActiveModal('uploadDoc')}
                 />
               )}
 

@@ -4,24 +4,29 @@ import CRMView from './CRMView';
 import FinanceView from './FinanceView';
 import InventoryView from './InventoryView';
 import POSView from './POSView';
+import DocumentsView from './DocumentsView';
 import ProjectView from './ProjectView';
 import TaskView from './TaskView';
 import { syncAll } from '../services/erpSync';
+
 export default function ERPView({
   customers,
   invoices,
   inventory,
+  documents = [],
   onOpenAddCustomer,
   onOpenCreateInvoice,
   onOpenAddInventory,
+  onOpenUploadDoc,
 }) {
   const sections = [
-    { id: 'crm', label: 'CRM' },
-    { id: 'inventory', label: 'Inventory' },
-    { id: 'project', label: 'Project' },
-    { id: 'finance', label: 'Finance' },
-    { id: 'pos', label: 'POS' },
-    { id: 'task', label: 'Task' },
+    { id: 'crm', label: 'CRM & Clients' },
+    { id: 'finance', label: 'Finance & Invoices' },
+    { id: 'inventory', label: 'Inventory & Stock' },
+    { id: 'pos', label: 'Point of Sale (POS)' },
+    { id: 'documents', label: 'Document Vault (Docs)' },
+    { id: 'project', label: 'Projects' },
+    { id: 'task', label: 'Tasks' },
   ];
 
   const [selected, setSelected] = useState('crm');
@@ -32,6 +37,8 @@ export default function ERPView({
     switch (selected) {
       case 'crm':
         return <CRMView customers={customers} onOpenAddCustomer={onOpenAddCustomer} />;
+      case 'finance':
+        return <FinanceView invoices={invoices} onOpenCreateInvoice={onOpenCreateInvoice} />;
       case 'inventory':
         return (
           <InventoryView
@@ -39,12 +46,12 @@ export default function ERPView({
             onOpenAddModal={onOpenAddInventory}
           />
         );
-      case 'project':
-        return <ProjectView />;
-      case 'finance':
-        return <FinanceView invoices={invoices} onOpenCreateInvoice={onOpenCreateInvoice} />;
       case 'pos':
         return <POSView inventory={inventory} />;
+      case 'documents':
+        return <DocumentsView documents={documents} onOpenUploadModal={onOpenUploadDoc} />;
+      case 'project':
+        return <ProjectView />;
       case 'task':
         return <TaskView />;
       default:
