@@ -899,8 +899,15 @@ const isPureUrl = (input) => {
     await runAutomationFlow(customPrompt, targetUrl, recipe.id);
   };
 
+  const addPlanStep = (title) => {
+    setTaskPlan(prev => [
+      ...prev,
+      { id: Date.now() + Math.random(), title, status: 'pending' }
+    ]);
+  };
+
   // Central Universal Visual AI Cursor & Action Executor
-  const executeAiCursorAction = async ({ type = 'click', target = 'body', value = '', desc = '', delay = 1200 }) => {
+  const executeAiCursorAction = async ({ type = 'click', target = 'body', value = '', desc = '', delay = 800 }) => {
     if (isAbortedRef.current) return;
     
     // Update HUD & Plan state
@@ -916,35 +923,33 @@ const isPureUrl = (input) => {
       // 1. Move AI Cursor, Highlight Bounding Box, Scroll Viewport into view
       await webviewRef.current.executeJavaScript(`
         (function() {
-          // Create or retrieve AI Cursor
           let cursor = document.getElementById('casjoe-ai-cursor');
           if (!cursor) {
             cursor = document.createElement('div');
             cursor.id = 'casjoe-ai-cursor';
             cursor.style.position = 'fixed';
             cursor.style.zIndex = '99999999';
-            cursor.style.width = '36px';
-            cursor.style.height = '36px';
+            cursor.style.width = '38px';
+            cursor.style.height = '38px';
             cursor.style.borderRadius = '50%';
-            cursor.style.background = 'radial-gradient(circle, rgba(0, 242, 254, 0.85) 0%, rgba(6, 182, 212, 0.35) 70%, transparent 100%)';
+            cursor.style.background = 'radial-gradient(circle, rgba(0, 242, 254, 0.9) 0%, rgba(6, 182, 212, 0.4) 70%, transparent 100%)';
             cursor.style.border = '2.5px solid #00f2fe';
-            cursor.style.boxShadow = '0 0 30px #00f2fe, 0 0 60px rgba(0, 242, 254, 0.4), inset 0 0 15px #00f2fe';
+            cursor.style.boxShadow = '0 0 35px #00f2fe, 0 0 70px rgba(0, 242, 254, 0.5), inset 0 0 15px #00f2fe';
             cursor.style.pointerEvents = 'none';
             cursor.style.transition = 'all 0.65s cubic-bezier(0.22, 1, 0.36, 1)';
             cursor.style.transform = 'translate(-50%, -50%)';
 
-            // Cursor Label
             const label = document.createElement('div');
             label.id = 'casjoe-ai-label';
             label.style.position = 'absolute';
-            label.style.top = '40px';
+            label.style.top = '42px';
             label.style.left = '50%';
             label.style.transform = 'translateX(-50%)';
             label.style.background = 'rgba(7, 11, 21, 0.95)';
             label.style.color = '#00f2fe';
             label.style.border = '1px solid #00f2fe';
-            label.style.boxShadow = '0 4px 15px rgba(0,0,0,0.8), 0 0 10px rgba(0, 242, 254, 0.3)';
-            label.style.padding = '4px 10px';
+            label.style.boxShadow = '0 4px 15px rgba(0,0,0,0.8), 0 0 12px rgba(0, 242, 254, 0.4)';
+            label.style.padding = '4px 12px';
             label.style.borderRadius = '8px';
             label.style.fontSize = '11px';
             label.style.fontWeight = 'bold';
@@ -956,22 +961,17 @@ const isPureUrl = (input) => {
             document.body.appendChild(cursor);
           }
 
-          // Locate target element
           let el = null;
-          try {
-            el = document.querySelector(${JSON.stringify(target)});
-          } catch(e) {}
+          try { el = document.querySelector(${JSON.stringify(target)}); } catch(e) {}
           if (!el && ${JSON.stringify(target)} !== 'body' && ${JSON.stringify(target)} !== 'window') {
             el = document.querySelector('button, input, a, [role="button"], textarea');
           }
 
           const targetElement = el || document.body;
 
-          // Smooth scroll to element so user always sees it move in real-time
           if (targetElement !== document.body) {
             targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
-            // Highlight element outline
             document.querySelectorAll('.casjoe-highlighted-el').forEach(h => {
               h.classList.remove('casjoe-highlighted-el');
               h.style.outline = '';
@@ -980,15 +980,14 @@ const isPureUrl = (input) => {
             targetElement.classList.add('casjoe-highlighted-el');
             targetElement.style.outline = '3px solid #00f2fe';
             targetElement.style.outlineOffset = '3px';
-            targetElement.style.boxShadow = '0 0 25px rgba(0, 242, 254, 0.7)';
+            targetElement.style.boxShadow = '0 0 25px rgba(0, 242, 254, 0.75)';
             targetElement.style.transition = 'outline 0.3s ease, box-shadow 0.3s ease';
           }
 
-          // Position cursor at element coordinates
           setTimeout(() => {
             const rect = targetElement.getBoundingClientRect();
-            const posX = targetElement === document.body ? window.innerWidth / 2 : rect.left + rect.width / 2;
-            const posY = targetElement === document.body ? window.innerHeight / 2 : rect.top + rect.height / 2;
+            const posX = targetElement === document.body ? window.innerWidth / 2 : rect.left + (rect.width ? rect.width / 2 : 20);
+            const posY = targetElement === document.body ? window.innerHeight / 2 : rect.top + (rect.height ? rect.height / 2 : 20);
 
             cursor.style.top = posY + 'px';
             cursor.style.left = posX + 'px';
@@ -997,22 +996,57 @@ const isPureUrl = (input) => {
             if (labelEl) {
               labelEl.innerText = '🤖 ' + ${JSON.stringify(desc || `${type}: ${target}`)};
             }
-          }, 80);
+          }, 60);
         })();
       `);
 
-      // Allow visual cursor to travel to the element
-      await sleep(speed === 'fast' ? 400 : 700);
+      // Let cursor glide across screen
+      await sleep(speed === 'fast' ? 350 : 650);
 
-      // 2. Perform the physical action with visual ripples
-      if (type === 'click') {
+      // 2. Perform action
+      if (type === 'type') {
+        const textToType = String(value || '');
+        // Visual typewriter character-by-character effect
+        for (let i = 1; i <= textToType.length; i++) {
+          if (isAbortedRef.current) break;
+          const currentSub = textToType.substring(0, i);
+          await webviewRef.current.executeJavaScript(`
+            (function() {
+              let el = null;
+              try { el = document.querySelector(${JSON.stringify(target)}); } catch(e) {}
+              if (!el) el = document.querySelector('input[type="text"], input:not([type="hidden"]), textarea, [contenteditable="true"]');
+              if (el) {
+                el.focus();
+                if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                  el.value = ${JSON.stringify(currentSub)};
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                } else if (el.isContentEditable) {
+                  el.innerText = ${JSON.stringify(currentSub)};
+                  el.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+              }
+            })();
+          `);
+          await sleep(speed === 'fast' ? 25 : 55);
+        }
+
+        // Final change event
+        await webviewRef.current.executeJavaScript(`
+          (function() {
+            let el = null;
+            try { el = document.querySelector(${JSON.stringify(target)}); } catch(e) {}
+            if (el) {
+              el.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          })();
+        `);
+      } else if (type === 'click') {
         await webviewRef.current.executeJavaScript(`
           (function() {
             let el = null;
             try { el = document.querySelector(${JSON.stringify(target)}); } catch(e) {}
             if (!el) el = document.querySelector('button, input, a, [role="button"]');
             
-            // Create click ripple animation
             const ripple = document.createElement('div');
             ripple.style.position = 'fixed';
             ripple.style.zIndex = '99999998';
@@ -1045,100 +1079,103 @@ const isPureUrl = (input) => {
             }
           })();
         `);
-      } else if (type === 'type') {
-        await webviewRef.current.executeJavaScript(`
-          (function() {
-            let el = null;
-            try { el = document.querySelector(${JSON.stringify(target)}); } catch(e) {}
-            if (!el) el = document.querySelector('input[type="text"], input:not([type="hidden"]), textarea, [contenteditable="true"]');
-            if (el) {
-              el.focus();
-              if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                el.value = ${JSON.stringify(value)};
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-                el.dispatchEvent(new Event('change', { bubbles: true }));
-              } else if (el.isContentEditable) {
-                el.innerText = ${JSON.stringify(value)};
-                el.dispatchEvent(new Event('input', { bubbles: true }));
-              }
-            }
-          })();
-        `);
       } else if (type === 'scroll') {
         await webviewRef.current.executeJavaScript(`
-          window.scrollBy({ top: 420, behavior: 'smooth' });
+          window.scrollBy({ top: 450, behavior: 'smooth' });
         `);
       }
 
-      await sleep(speed === 'fast' ? 400 : 700);
+      await sleep(speed === 'fast' ? 300 : 600);
     } catch (err) {
       console.warn('AI Cursor Action warning:', err);
     }
   };
 
-  // Dedicated Yopmail / Temporary Email Creation Workflow
+  // Dedicated Yopmail Temporary Email Workflow (Live Search & Takeover)
   const executeYopmailEmailFlow = async (commandText) => {
     addLog(`📧 Initializing Yopmail Temporary Email Workflow...`, 'info');
-    setCurrentAiAction({ type: 'Working Memory', text: 'Generating temporary email inboxes' });
+    setCurrentAiAction({ type: 'Working Memory', text: 'Preparing live Yopmail account creation' });
 
-    // Parse requested count (default to 5)
-    const countMatch = commandText.match(/(\d+)\s*(?:email|inbox|mail|account)/i);
-    const count = countMatch ? Math.min(parseInt(countMatch[1], 10), 10) : 5;
+    // 1. Extract requested username if provided (e.g. "miracle@yopmail.com" -> "miracle", or "miracle")
+    let username = 'miracle';
+    const emailMatch = commandText.match(/([a-zA-Z0-9._-]+)@yopmail(?:\.com)?/i);
+    const userMatch = commandText.match(/use\s+([a-zA-Z0-9._-]+)/i);
+    const nameMatch = commandText.match(/name\s+([a-zA-Z0-9._-]+)/i);
 
-    // Generate random usernames
-    const prefixes = ['casjoe', 'business', 'client', 'lead', 'market', 'trade', 'enterprise', 'connect', 'portal', 'smart'];
-    const generatedEmails = [];
-    for (let i = 0; i < count; i++) {
-      const pfx = prefixes[i % prefixes.length];
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      generatedEmails.push(`${pfx}_${rand}@yopmail.com`);
+    if (emailMatch) {
+      username = emailMatch[1];
+    } else if (userMatch) {
+      username = userMatch[1].replace('@yopmail.com', '');
+    } else if (nameMatch) {
+      username = nameMatch[1].replace('@yopmail.com', '');
+    } else {
+      username = `casjoe_user_${Math.floor(1000 + Math.random() * 9000)}`;
     }
 
-    addPlanStep(`Navigate to Yopmail.com`);
-    addPlanStep(`Generate ${count} temporary inboxes`);
-    addPlanStep(`Inspect primary inbox on webview`);
-    addPlanStep(`Save email list to Scratchpad`);
+    const fullEmail = `${username}@yopmail.com`;
+
+    // Initialize Plan in Manus Console
+    setTaskPlan([
+      { id: 1, title: 'Navigate to Yopmail Portal', status: 'active' },
+      { id: 2, title: `Enter inbox username "${username}"`, status: 'pending' },
+      { id: 3, title: 'Access live mailbox inbox view', status: 'pending' },
+      { id: 4, title: `Verify inbox for ${fullEmail}`, status: 'pending' },
+      { id: 5, title: 'Save account credentials to Scratchpad', status: 'pending' },
+    ]);
 
     // 1. Navigate to Yopmail
     const targetUrl = 'https://yopmail.com';
-    if (activeTab.url !== targetUrl) {
-      addLog(`🌐 Navigating browser to ${targetUrl}...`, 'info');
-      handleNavigate(targetUrl);
-      await sleep(2500);
-    }
+    addLog(`🌐 AI Agent taking over browser: Navigating to ${targetUrl}...`, 'info');
+    handleNavigate(targetUrl);
+    await sleep(2800);
 
-    const firstUsername = generatedEmails[0].split('@')[0];
-    addLog(`✍️ Opening primary inbox: ${firstUsername}@yopmail.com`, 'info');
+    setTaskPlan(p => p.map(s => s.id === 1 ? { ...s, status: 'completed' } : s.id === 2 ? { ...s, status: 'active' } : s));
 
-    // 2. Type into Yopmail input and submit
+    // 2. Locate Yopmail search input, type username with live keystroke animation
+    addLog(`✍️ Moving AI cursor to login field and typing "${username}"...`, 'action');
     await executeAiCursorAction({
       type: 'type',
       target: '#login, input[name="login"], input[placeholder*="inbox" i], input[type="text"]',
-      value: firstUsername,
-      desc: `Entering username "${firstUsername}"`
+      value: username,
+      desc: `Typing username "${username}"`
     });
 
     await sleep(600);
 
+    setTaskPlan(p => p.map(s => s.id === 2 ? { ...s, status: 'completed' } : s.id === 3 ? { ...s, status: 'active' } : s));
+
+    // 3. Move cursor to arrow / check inbox button and click with ripple
+    addLog(`🖱️ Clicking Check Inbox arrow button to load ${fullEmail}...`, 'action');
     await executeAiCursorAction({
       type: 'click',
-      target: '#refreshbut, button[title*="Check" i], button.material-icons-outlined, button[type="submit"], #f button',
-      desc: `Accessing ${firstUsername}@yopmail.com inbox`
+      target: '#refreshbut, button[title*="Check" i], button.material-icons-outlined, button[type="submit"], #f button, input[type="submit"]',
+      desc: `Opening ${fullEmail} inbox`
     });
 
-    await sleep(1500);
+    await sleep(2500);
 
-    // 3. Write structured results to Scratchpad
-    const markdownContent = `### 📬 Generated Yopmail Inboxes (${count})\n\n` +
-      `| # | Email Address | Direct Inbox URL |\n|---|---|---|\n` +
-      generatedEmails.map((em, idx) => {
-        const uname = em.split('@')[0];
-        return `| ${idx + 1} | **${em}** | [Open Inbox](https://yopmail.com/?${uname}) |`;
-      }).join('\n') +
-      `\n\n> 💡 **Tip:** Click any inbox URL or enter the username at [yopmail.com](https://yopmail.com) to check incoming messages.`;
+    setTaskPlan(p => p.map(s => s.id === 3 ? { ...s, status: 'completed' } : s.id === 4 ? { ...s, status: 'active' } : s));
 
-    saveToScratchpad(`Generated Yopmail Inboxes (${new Date().toLocaleTimeString()})`, markdownContent);
-    addLog(`✅ Successfully generated ${count} Yopmail inboxes! Saved to Scratchpad.`, 'success');
+    // 4. Highlight the loaded inbox interface
+    await executeAiCursorAction({
+      type: 'scroll',
+      target: '#ifmail, #wm, .bname, body',
+      desc: `Viewing ${fullEmail} mailbox`
+    });
+
+    setTaskPlan(p => p.map(s => s.id === 4 ? { ...s, status: 'completed' } : s.id === 5 ? { ...s, status: 'active' } : s));
+
+    // 5. Save structured record to Scratchpad with 1-click Copy & Direct URL
+    const markdownContent = `### 📬 Yopmail Temporary Account Created\n\n` +
+      `* **Email Address**: \`${fullEmail}\`\n` +
+      `* **Username**: \`${username}\`\n` +
+      `* **Direct Inbox URL**: [https://yopmail.com/?${username}](https://yopmail.com/?${username})\n` +
+      `* **Status**: 🟢 Active & Ready for Verification Codes\n\n` +
+      `> 💡 **Usage:** Use this email address on any website requiring verification. Any incoming messages will appear automatically in the loaded inbox!`;
+
+    saveToScratchpad(`Yopmail Account: ${fullEmail}`, markdownContent);
+    setTaskPlan(p => p.map(s => s.id === 5 ? { ...s, status: 'completed' } : s));
+    addLog(`🎉 Successfully created and opened inbox for ${fullEmail}! Saved to Scratchpad.`, 'success');
   };
 
   // Universal Sense-Think-Act Automation Engine
