@@ -133,13 +133,30 @@ export default function AgentBrowserView() {
     ]);
   };
 
+// Helper: Determine if string is a strict URL (no whitespace) vs a prompt
+const isPureUrl = (input) => {
+  if (!input || typeof input !== 'string') return false;
+  const trimmed = input.trim();
+  if (trimmed.includes(' ') || trimmed.includes('\n')) return false; // Prompts have spaces
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('casjoe:') || trimmed.startsWith('about:') || trimmed.startsWith('file://')) {
+    return true;
+  }
+  const domainRegex = /^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(\/.*)?$/i;
+  return domainRegex.test(trimmed);
+};
+
   const handleNavigate = (urlToLoad) => {
-    const target = urlToLoad || omnibarText;
-    if (!target.trim()) return;
+    const target = (urlToLoad || omnibarText).trim();
+    if (!target) return;
 
     let formatted = target;
-    if (!target.startsWith('http://') && !target.startsWith('https://') && target !== 'casjoe:newtab') {
-      formatted = `https://${target}`;
+    if (isPureUrl(target)) {
+      if (!target.startsWith('http://') && !target.startsWith('https://') && target !== 'casjoe:newtab' && !target.startsWith('about:') && !target.startsWith('file:')) {
+        formatted = `https://${target}`;
+      }
+    } else {
+      // Natural language / search query -> route to Google Search
+      formatted = `https://www.google.com/search?q=${encodeURIComponent(target)}`;
     }
 
     setTabs(prev => prev.map(t => t.id === activeTabId ? {
@@ -882,6 +899,248 @@ export default function AgentBrowserView() {
     await runAutomationFlow(customPrompt, targetUrl, recipe.id);
   };
 
+  // Central Universal Visual AI Cursor & Action Executor
+  const executeAiCursorAction = async ({ type = 'click', target = 'body', value = '', desc = '', delay = 1200 }) => {
+    if (isAbortedRef.current) return;
+    
+    // Update HUD & Plan state
+    setCurrentAiAction({ type: type.toUpperCase(), text: desc || `${type} on ${target}` });
+    addLog(`🎯 ${desc || `${type.toUpperCase()} -> ${target}`}`, 'action');
+
+    if (!webviewRef.current?.executeJavaScript) {
+      await sleep(delay);
+      return;
+    }
+
+    try {
+      // 1. Move AI Cursor, Highlight Bounding Box, Scroll Viewport into view
+      await webviewRef.current.executeJavaScript(`
+        (function() {
+          // Create or retrieve AI Cursor
+          let cursor = document.getElementById('casjoe-ai-cursor');
+          if (!cursor) {
+            cursor = document.createElement('div');
+            cursor.id = 'casjoe-ai-cursor';
+            cursor.style.position = 'fixed';
+            cursor.style.zIndex = '99999999';
+            cursor.style.width = '36px';
+            cursor.style.height = '36px';
+            cursor.style.borderRadius = '50%';
+            cursor.style.background = 'radial-gradient(circle, rgba(0, 242, 254, 0.85) 0%, rgba(6, 182, 212, 0.35) 70%, transparent 100%)';
+            cursor.style.border = '2.5px solid #00f2fe';
+            cursor.style.boxShadow = '0 0 30px #00f2fe, 0 0 60px rgba(0, 242, 254, 0.4), inset 0 0 15px #00f2fe';
+            cursor.style.pointerEvents = 'none';
+            cursor.style.transition = 'all 0.65s cubic-bezier(0.22, 1, 0.36, 1)';
+            cursor.style.transform = 'translate(-50%, -50%)';
+
+            // Cursor Label
+            const label = document.createElement('div');
+            label.id = 'casjoe-ai-label';
+            label.style.position = 'absolute';
+            label.style.top = '40px';
+            label.style.left = '50%';
+            label.style.transform = 'translateX(-50%)';
+            label.style.background = 'rgba(7, 11, 21, 0.95)';
+            label.style.color = '#00f2fe';
+            label.style.border = '1px solid #00f2fe';
+            label.style.boxShadow = '0 4px 15px rgba(0,0,0,0.8), 0 0 10px rgba(0, 242, 254, 0.3)';
+            label.style.padding = '4px 10px';
+            label.style.borderRadius = '8px';
+            label.style.fontSize = '11px';
+            label.style.fontWeight = 'bold';
+            label.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+            label.style.whiteSpace = 'nowrap';
+            label.style.letterSpacing = '0.5px';
+            label.innerText = '🤖 Casjoe AI';
+            cursor.appendChild(label);
+            document.body.appendChild(cursor);
+          }
+
+          // Locate target element
+          let el = null;
+          try {
+            el = document.querySelector(${JSON.stringify(target)});
+          } catch(e) {}
+          if (!el && ${JSON.stringify(target)} !== 'body' && ${JSON.stringify(target)} !== 'window') {
+            el = document.querySelector('button, input, a, [role="button"], textarea');
+          }
+
+          const targetElement = el || document.body;
+
+          // Smooth scroll to element so user always sees it move in real-time
+          if (targetElement !== document.body) {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight element outline
+            document.querySelectorAll('.casjoe-highlighted-el').forEach(h => {
+              h.classList.remove('casjoe-highlighted-el');
+              h.style.outline = '';
+              h.style.boxShadow = '';
+            });
+            targetElement.classList.add('casjoe-highlighted-el');
+            targetElement.style.outline = '3px solid #00f2fe';
+            targetElement.style.outlineOffset = '3px';
+            targetElement.style.boxShadow = '0 0 25px rgba(0, 242, 254, 0.7)';
+            targetElement.style.transition = 'outline 0.3s ease, box-shadow 0.3s ease';
+          }
+
+          // Position cursor at element coordinates
+          setTimeout(() => {
+            const rect = targetElement.getBoundingClientRect();
+            const posX = targetElement === document.body ? window.innerWidth / 2 : rect.left + rect.width / 2;
+            const posY = targetElement === document.body ? window.innerHeight / 2 : rect.top + rect.height / 2;
+
+            cursor.style.top = posY + 'px';
+            cursor.style.left = posX + 'px';
+
+            const labelEl = document.getElementById('casjoe-ai-label');
+            if (labelEl) {
+              labelEl.innerText = '🤖 ' + ${JSON.stringify(desc || `${type}: ${target}`)};
+            }
+          }, 80);
+        })();
+      `);
+
+      // Allow visual cursor to travel to the element
+      await sleep(speed === 'fast' ? 400 : 700);
+
+      // 2. Perform the physical action with visual ripples
+      if (type === 'click') {
+        await webviewRef.current.executeJavaScript(`
+          (function() {
+            let el = null;
+            try { el = document.querySelector(${JSON.stringify(target)}); } catch(e) {}
+            if (!el) el = document.querySelector('button, input, a, [role="button"]');
+            
+            // Create click ripple animation
+            const ripple = document.createElement('div');
+            ripple.style.position = 'fixed';
+            ripple.style.zIndex = '99999998';
+            ripple.style.width = '60px';
+            ripple.style.height = '60px';
+            ripple.style.borderRadius = '50%';
+            ripple.style.border = '3px solid #FF9F00';
+            ripple.style.boxShadow = '0 0 20px #FF9F00';
+            ripple.style.pointerEvents = 'none';
+            ripple.style.transform = 'translate(-50%, -50%) scale(0.2)';
+            ripple.style.transition = 'all 0.5s ease-out';
+            ripple.style.opacity = '1';
+
+            const cursor = document.getElementById('casjoe-ai-cursor');
+            if (cursor) {
+              ripple.style.top = cursor.style.top;
+              ripple.style.left = cursor.style.left;
+            }
+            document.body.appendChild(ripple);
+            setTimeout(() => {
+              ripple.style.transform = 'translate(-50%, -50%) scale(1.6)';
+              ripple.style.opacity = '0';
+              setTimeout(() => ripple.remove(), 500);
+            }, 50);
+
+            if (el) {
+              el.focus();
+              el.click();
+              el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+            }
+          })();
+        `);
+      } else if (type === 'type') {
+        await webviewRef.current.executeJavaScript(`
+          (function() {
+            let el = null;
+            try { el = document.querySelector(${JSON.stringify(target)}); } catch(e) {}
+            if (!el) el = document.querySelector('input[type="text"], input:not([type="hidden"]), textarea, [contenteditable="true"]');
+            if (el) {
+              el.focus();
+              if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                el.value = ${JSON.stringify(value)};
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+              } else if (el.isContentEditable) {
+                el.innerText = ${JSON.stringify(value)};
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            }
+          })();
+        `);
+      } else if (type === 'scroll') {
+        await webviewRef.current.executeJavaScript(`
+          window.scrollBy({ top: 420, behavior: 'smooth' });
+        `);
+      }
+
+      await sleep(speed === 'fast' ? 400 : 700);
+    } catch (err) {
+      console.warn('AI Cursor Action warning:', err);
+    }
+  };
+
+  // Dedicated Yopmail / Temporary Email Creation Workflow
+  const executeYopmailEmailFlow = async (commandText) => {
+    addLog(`📧 Initializing Yopmail Temporary Email Workflow...`, 'info');
+    setCurrentAiAction({ type: 'Working Memory', text: 'Generating temporary email inboxes' });
+
+    // Parse requested count (default to 5)
+    const countMatch = commandText.match(/(\d+)\s*(?:email|inbox|mail|account)/i);
+    const count = countMatch ? Math.min(parseInt(countMatch[1], 10), 10) : 5;
+
+    // Generate random usernames
+    const prefixes = ['casjoe', 'business', 'client', 'lead', 'market', 'trade', 'enterprise', 'connect', 'portal', 'smart'];
+    const generatedEmails = [];
+    for (let i = 0; i < count; i++) {
+      const pfx = prefixes[i % prefixes.length];
+      const rand = Math.floor(1000 + Math.random() * 9000);
+      generatedEmails.push(`${pfx}_${rand}@yopmail.com`);
+    }
+
+    addPlanStep(`Navigate to Yopmail.com`);
+    addPlanStep(`Generate ${count} temporary inboxes`);
+    addPlanStep(`Inspect primary inbox on webview`);
+    addPlanStep(`Save email list to Scratchpad`);
+
+    // 1. Navigate to Yopmail
+    const targetUrl = 'https://yopmail.com';
+    if (activeTab.url !== targetUrl) {
+      addLog(`🌐 Navigating browser to ${targetUrl}...`, 'info');
+      handleNavigate(targetUrl);
+      await sleep(2500);
+    }
+
+    const firstUsername = generatedEmails[0].split('@')[0];
+    addLog(`✍️ Opening primary inbox: ${firstUsername}@yopmail.com`, 'info');
+
+    // 2. Type into Yopmail input and submit
+    await executeAiCursorAction({
+      type: 'type',
+      target: '#login, input[name="login"], input[placeholder*="inbox" i], input[type="text"]',
+      value: firstUsername,
+      desc: `Entering username "${firstUsername}"`
+    });
+
+    await sleep(600);
+
+    await executeAiCursorAction({
+      type: 'click',
+      target: '#refreshbut, button[title*="Check" i], button.material-icons-outlined, button[type="submit"], #f button',
+      desc: `Accessing ${firstUsername}@yopmail.com inbox`
+    });
+
+    await sleep(1500);
+
+    // 3. Write structured results to Scratchpad
+    const markdownContent = `### 📬 Generated Yopmail Inboxes (${count})\n\n` +
+      `| # | Email Address | Direct Inbox URL |\n|---|---|---|\n` +
+      generatedEmails.map((em, idx) => {
+        const uname = em.split('@')[0];
+        return `| ${idx + 1} | **${em}** | [Open Inbox](https://yopmail.com/?${uname}) |`;
+      }).join('\n') +
+      `\n\n> 💡 **Tip:** Click any inbox URL or enter the username at [yopmail.com](https://yopmail.com) to check incoming messages.`;
+
+    saveToScratchpad(`Generated Yopmail Inboxes (${new Date().toLocaleTimeString()})`, markdownContent);
+    addLog(`✅ Successfully generated ${count} Yopmail inboxes! Saved to Scratchpad.`, 'success');
+  };
+
   // Universal Sense-Think-Act Automation Engine
   const runAutomationFlow = async (commandText, targetUrlOverride = null, recipeId = null) => {
     isAbortedRef.current = false;
@@ -902,7 +1161,13 @@ export default function AgentBrowserView() {
         return;
       }
 
-      // Case 0.5: Manus Multi-Step Autonomous Goal (e.g. search, research, price comparison table)
+      // Case 0.5: Yopmail / Temporary Email Creation Workflow
+      if (lowerCmd.includes('yopmail') || (lowerCmd.includes('email') && (lowerCmd.includes('open') || lowerCmd.includes('create') || lowerCmd.includes('generate')))) {
+        await executeYopmailEmailFlow(commandText);
+        return;
+      }
+
+      // Case 0.6: Manus Multi-Step Autonomous Goal (e.g. search, research, price comparison table)
       if (lowerCmd.includes('search') || lowerCmd.includes('research') || lowerCmd.includes('find') || lowerCmd.includes('compare') || lowerCmd.includes('extract table') || lowerCmd.includes('manus')) {
         await executeManusAutonomousGoal(commandText);
         return;
@@ -932,19 +1197,27 @@ export default function AgentBrowserView() {
       }
 
       // Case D: Universal Navigation & Custom Step Execution
-      let targetUrl = targetUrlOverride || activeTab.url;
-      if (isNewTabPage || lowerCmd.includes('facebook') || lowerCmd.includes('whatsapp') || lowerCmd.includes('linkedin') || lowerCmd.includes('casjoe')) {
-        if (lowerCmd.includes('facebook')) targetUrl = 'https://www.facebook.com';
-        else if (lowerCmd.includes('whatsapp')) targetUrl = 'https://web.whatsapp.com';
-        else if (lowerCmd.includes('linkedin')) targetUrl = 'https://www.linkedin.com';
-        else if (lowerCmd.includes('casjoe') || lowerCmd.includes('bos')) targetUrl = 'https://app.casjoe.com';
-        else if (isNewTabPage) targetUrl = 'https://www.google.com';
+      const domainMatch = commandText.match(/\b([a-zA-Z0-9-]+\.(?:com|org|net|io|co|ng|app|gov|edu|me|biz|site|xyz|online)(?:\/[^\s]*)?)\b/i);
 
-        if (activeTab.url !== targetUrl) {
-          addLog(`Navigating live browser to ${targetUrl}...`, 'info');
-          handleNavigate(targetUrl);
-          await sleep(2500);
-        }
+      let targetUrl = targetUrlOverride || activeTab.url;
+      if (domainMatch && domainMatch[1]) {
+        targetUrl = `https://${domainMatch[1]}`;
+      } else if (lowerCmd.includes('facebook')) {
+        targetUrl = 'https://www.facebook.com';
+      } else if (lowerCmd.includes('whatsapp')) {
+        targetUrl = 'https://web.whatsapp.com';
+      } else if (lowerCmd.includes('linkedin')) {
+        targetUrl = 'https://www.linkedin.com';
+      } else if (lowerCmd.includes('casjoe') || lowerCmd.includes('bos')) {
+        targetUrl = 'https://app.casjoe.com';
+      } else if (isNewTabPage) {
+        targetUrl = 'https://www.google.com';
+      }
+
+      if (activeTab.url !== targetUrl) {
+        addLog(`Navigating live browser to ${targetUrl}...`, 'info');
+        handleNavigate(targetUrl);
+        await sleep(2500);
       }
 
       if (isAbortedRef.current) return;
@@ -1006,95 +1279,14 @@ export default function AgentBrowserView() {
         stepIdx++;
         const stepText = `Step ${stepIdx}/${totalSteps}: ${act.desc || `${act.type.toUpperCase()} on ${act.target || 'page'}`}`;
         setCurrentAiAction({ step: stepIdx, total: totalSteps, message: stepText });
-        addLog(stepText, 'action');
+        addPlanStep(stepText);
 
-        if (webviewRef.current?.executeJavaScript) {
-          try {
-            await webviewRef.current.executeJavaScript(`
-              (function() {
-                let cursor = document.getElementById('casjoe-ai-cursor');
-                if (!cursor) {
-                  cursor = document.createElement('div');
-                  cursor.id = 'casjoe-ai-cursor';
-                  cursor.style.position = 'fixed';
-                  cursor.style.zIndex = '9999999';
-                  cursor.style.width = '30px';
-                  cursor.style.height = '30px';
-                  cursor.style.borderRadius = '50%';
-                  cursor.style.background = 'rgba(6, 182, 212, 0.55)';
-                  cursor.style.border = '2.5px solid #00f2fe';
-                  cursor.style.boxShadow = '0 0 25px #00f2fe, inset 0 0 12px #00f2fe';
-                  cursor.style.pointerEvents = 'none';
-                  cursor.style.transition = 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)';
-
-                  const label = document.createElement('div');
-                  label.id = 'casjoe-ai-label';
-                  label.style.position = 'absolute';
-                  label.style.top = '34px';
-                  label.style.left = '-15px';
-                  label.style.background = '#0B1222';
-                  label.style.color = '#00f2fe';
-                  label.style.border = '1px solid #00f2fe';
-                  label.style.padding = '2px 8px';
-                  label.style.borderRadius = '6px';
-                  label.style.fontSize = '10px';
-                  label.style.fontWeight = 'bold';
-                  label.style.whiteSpace = 'nowrap';
-                  label.innerText = '🤖 Casjoe AI';
-                  cursor.appendChild(label);
-                  document.body.appendChild(cursor);
-                }
-
-                const targetEl = document.querySelector('${act.target || 'button, a, textarea, [role=button]'}') || document.body;
-                const rect = targetEl.getBoundingClientRect();
-                cursor.style.top = (rect.top + (rect.height ? rect.height/2 : 20) - 15) + 'px';
-                cursor.style.left = (rect.left + (rect.width ? rect.width/2 : 20) - 15) + 'px';
-
-                if (targetEl !== document.body) {
-                  targetEl.style.outline = '2px solid #00f2fe';
-                  targetEl.style.outlineOffset = '2px';
-                }
-              })();
-            `);
-          } catch {}
-
-          if (act.type === 'scroll') {
-            await webviewRef.current.executeJavaScript(`window.scrollBy({ top: 380, behavior: "smooth" });`);
-          } else if (act.type === 'click') {
-            await webviewRef.current.executeJavaScript(`
-              (function() {
-                const el = document.querySelector('${act.target || 'button, a, [role=button]'}');
-                if (el) {
-                  el.focus();
-                  el.click();
-                  el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-                }
-              })();
-            `);
-          } else if (act.type === 'type') {
-            const textToType = (act.value || commandText).replace(/"/g, '\\"');
-            await webviewRef.current.executeJavaScript(`
-              (function() {
-                const el = document.querySelector('${act.target || 'textarea, [contenteditable=true], input, [role=textbox]'}') || document.querySelector('textarea, [contenteditable=true], input');
-                if (el) {
-                  el.focus();
-                  if (el.isContentEditable) {
-                    try {
-                      document.execCommand('selectAll', false, null);
-                      document.execCommand('insertText', false, "${textToType}");
-                    } catch (e) {
-                      el.innerText = "${textToType}";
-                    }
-                  } else {
-                    el.value = "${textToType}";
-                  }
-                  el.dispatchEvent(new Event('input', { bubbles: true }));
-                  el.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-              })();
-            `);
-          }
-        }
+        await executeAiCursorAction({
+          type: act.type,
+          target: act.target,
+          value: act.value || commandText,
+          desc: act.desc || `${act.type} on ${act.target}`
+        });
 
         await sleep(delayTime);
       }
@@ -1112,14 +1304,17 @@ export default function AgentBrowserView() {
   };
 
   const handleOmnibarSubmit = async () => {
-    if (!omnibarText.trim() || isAutomating) return;
+    const text = (omnibarText || '').trim();
+    if (!text || isAutomating) return;
 
-    if (omnibarText.startsWith('http') || omnibarText.includes('.com') || omnibarText.includes('.org') || omnibarText.includes('.php') || omnibarText.includes('.net')) {
-      handleNavigate(omnibarText);
+    // If it's a strict single URL (no spaces, e.g. "yopmail.com" or "https://yopmail.com")
+    if (isPureUrl(text)) {
+      handleNavigate(text);
       return;
     }
 
-    await runAutomationFlow(omnibarText);
+    // Natural language command / AI instruction (contains spaces, e.g. "open 5 Email for me from yopmail.com")
+    await runAutomationFlow(text);
   };
 
   return (
