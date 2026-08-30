@@ -15,7 +15,8 @@
     "electron:build": "vite build && electron-builder",
     "electron:build:mac": "vite build && electron-builder --mac",
     "electron:build:linux": "vite build && electron-builder --linux",
-    "electron:build:win": "vite build && electron-builder --win"
+    "electron:build:win": "vite build && electron-builder --win",
+    "build:website": "node website_builder.cjs"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
