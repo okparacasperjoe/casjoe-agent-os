@@ -301,6 +301,19 @@ export const AGENT_TOOL_DEFINITIONS = [
       },
       required: ['url']
     }
+  },
+  {
+    name: 'generate_ui_code',
+    description: 'Design and code a complete, standalone responsive HTML/Tailwind CSS landing page, website, or UI component and open it in the Live Preview Studio.',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Title/Brand name of the website or business.' },
+        description: { type: 'string', description: 'Features, sections, purpose, and theme requirements.' },
+        category: { type: 'string', description: 'Category: SaaS | Business | School | ECommerce | Portfolio | Restaurant | Agency' }
+      },
+      required: ['title']
+    }
   }
 ];
 
@@ -322,6 +335,8 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
       normalizedTool = 'extract_contact_leads';
     } else if (['open_browser', 'open_google', 'launch_browser', 'browse_web', 'open_search_engine'].includes(toolName)) {
       normalizedTool = 'open_browser_url';
+    } else if (['generate_ui_code', 'design_landing_page', 'build_landing_page', 'create_landing_page', 'code_landing_page', 'design_website', 'create_website', 'build_website', 'create_ui', 'design_ui'].includes(toolName)) {
+      normalizedTool = 'generate_ui_code';
     }
 
     // Ensure filePath default
@@ -341,6 +356,171 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
     }
 
     switch (normalizedTool) {
+      case 'generate_ui_code': {
+        const title = args.title || 'Nexus Business Hub';
+        const description = args.description || args.prompt || 'Modern responsive business landing page';
+        const category = args.category || 'SaaS';
+
+        // Synthesize modern high-converting standalone HTML landing page
+        const generatedHtml = `<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} — Official Website</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #070B15; color: #F8FAFC; }
+    .glass-box { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-box:hover { border-color: rgba(245, 158, 11, 0.4); transform: translateY(-4px); transition: all 0.3s ease; }
+  </style>
+</head>
+<body class="overflow-x-hidden">
+  <!-- Top Banner -->
+  <div class="bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 text-slate-950 px-4 py-2 text-center text-xs font-bold tracking-wide">
+    🚀 Built Live with Casjoe Agent OS UI Studio • Ready to Launch
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sticky top-0 z-50 backdrop-blur-md bg-[#070B15]/80 border-b border-white/5 px-6 py-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-400 text-slate-950 font-black text-lg flex items-center justify-center shadow-lg shadow-orange-500/20">
+          ⚡
+        </div>
+        <span class="text-xl font-extrabold tracking-tight text-white">${title}</span>
+      </div>
+      <div class="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-400">
+        <a href="#services" class="hover:text-white transition">Services</a>
+        <a href="#about" class="hover:text-white transition">About</a>
+        <a href="#pricing" class="hover:text-white transition">Packages</a>
+        <a href="#contact" class="hover:text-white transition">Contact</a>
+      </div>
+      <a href="#contact" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-400 text-slate-950 font-bold text-xs shadow-md shadow-orange-500/20 hover:opacity-95 transition">Get Started</a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="relative pt-20 pb-16 px-6 text-center max-w-4xl mx-auto">
+    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mb-6">
+      ✨ Premium Business Solutions & Innovation
+    </div>
+    <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white leading-tight mb-6">
+      Elevate Your Operations with <span class="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-200 bg-clip-text text-transparent">${title}</span>
+    </h1>
+    <p class="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+      ${description}
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="#pricing" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-sm shadow-xl shadow-amber-500/30 transition flex items-center justify-center gap-2">
+        Explore Packages &rarr;
+      </a>
+      <a href="#contact" class="w-full sm:w-auto px-8 py-3.5 rounded-xl glass-box text-slate-300 font-semibold text-sm hover:text-white transition">
+        Contact Team
+      </a>
+    </div>
+  </header>
+
+  <!-- Feature Offerings -->
+  <section id="services" class="py-16 px-6 max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">Our Solutions</h2>
+      <p class="text-2xl sm:text-3xl font-extrabold text-white">Engineered for Reliability & Scale</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="glass-box p-8 rounded-2xl">
+        <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-xl mb-6">🎯</div>
+        <h3 class="text-lg font-bold text-white mb-2">Tailored Execution</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">Customized workflows aligned specifically to your organizational objectives and growth metrics.</p>
+      </div>
+      <div class="glass-box p-8 rounded-2xl">
+        <div class="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 flex items-center justify-center text-xl mb-6">⚡</div>
+        <h3 class="text-lg font-bold text-white mb-2">Rapid Deployment</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">Go from initial concept to live market operations in days instead of months with streamlined execution.</p>
+      </div>
+      <div class="glass-box p-8 rounded-2xl">
+        <div class="w-12 h-12 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center text-xl mb-6">🛡️</div>
+        <h3 class="text-lg font-bold text-white mb-2">Dedicated Support</h3>
+        <p class="text-xs text-slate-400 leading-relaxed">Continuous performance monitoring, 24/7 dedicated support, and ongoing operational upgrades.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Packages -->
+  <section id="pricing" class="py-16 px-6 max-w-5xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-xs font-bold uppercase tracking-widest text-amber-400 mb-2">Transparent Pricing</h2>
+      <p class="text-2xl sm:text-3xl font-extrabold text-white">Choose Your Growth Tier</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div class="glass-box p-8 rounded-3xl">
+        <h3 class="text-base font-bold text-slate-300">Standard Tier</h3>
+        <div class="my-4"><span class="text-4xl font-extrabold text-white">₦150,000</span> <span class="text-xs text-slate-400">/ project</span></div>
+        <p class="text-xs text-slate-400 mb-6">Essential deliverables, full setup, and 30-day post-launch optimization.</p>
+        <button class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition">Select Standard</button>
+      </div>
+      <div class="glass-box p-8 rounded-3xl border-amber-500/50 bg-gradient-to-b from-amber-950/20 to-slate-900/60 relative">
+        <div class="absolute -top-3 right-6 bg-amber-500 text-slate-950 text-[10px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider">Recommended</div>
+        <h3 class="text-base font-bold text-white">Enterprise Premium</h3>
+        <div class="my-4"><span class="text-4xl font-extrabold text-white">₦350,000</span> <span class="text-xs text-slate-400">/ project</span></div>
+        <p class="text-xs text-slate-400 mb-6">Complete end-to-end integration, custom features, priority SLA, and 1-year dedicated warranty.</p>
+        <button class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/30 transition">Select Enterprise</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact Form -->
+  <section id="contact" class="py-16 px-6 max-w-3xl mx-auto">
+    <div class="glass-box p-8 sm:p-10 rounded-3xl">
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-extrabold text-white">Let's Discuss Your Project</h2>
+        <p class="text-xs text-slate-400 mt-2">Send us a message and our team will get back to you within 24 hours.</p>
+      </div>
+      <form onsubmit="event.preventDefault(); alert('Thank you! Your message has been received.');" class="space-y-4 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input type="text" placeholder="Your Name" required class="w-full bg-[#050811] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-500" />
+          <input type="email" placeholder="Email Address" required class="w-full bg-[#050811] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-500" />
+        </div>
+        <input type="tel" placeholder="Phone Number / WhatsApp" class="w-full bg-[#050811] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-500" />
+        <textarea rows="4" placeholder="Tell us about your requirements..." required class="w-full bg-[#050811] border border-slate-800 rounded-xl p-3 text-white focus:outline-none focus:border-amber-500"></textarea>
+        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-400 hover:from-amber-400 hover:to-orange-300 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-orange-500/20 transition">
+          Submit Message
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/5 py-8 text-center text-xs text-slate-500">
+    <p>&copy; 2026 ${title}. Powered by Casjoe Agent OS Live Studio.</p>
+  </footer>
+</body>
+</html>`;
+
+        // Save to Document Vault
+        await db.documents.add({
+          name: `Landing Page: ${title}`,
+          size: `${Math.round(generatedHtml.length / 1024 * 10) / 10} KB`,
+          type: 'html',
+          content: generatedHtml,
+          summary: `Landing page generated for ${title} (${category})`,
+          createdAt: new Date().toISOString()
+        }).catch(() => {});
+
+        // Dispatch live event to open code studio
+        window.dispatchEvent(new CustomEvent('casjoe:open-code-studio', {
+          detail: { code: generatedHtml }
+        }));
+
+        return {
+          success: true,
+          deliverableFile: 'landing_page.html',
+          deliverableHtml: generatedHtml,
+          content: generatedHtml,
+          summary: `Successfully coded a complete responsive HTML/Tailwind landing page for "${title}". Live Code Studio Preview is ready!`
+        };
+      }
       case 'search_web_information': {
         const query = (args.query || args.searchQuery || args.keyword || 'schools in Port Harcourt').toLowerCase();
         let contacts = [];

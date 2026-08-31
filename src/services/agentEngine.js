@@ -91,6 +91,7 @@ export class AgentOSOrchestrator {
 Goal: "${userGoal}"
 
 Available Tools:
+- "generate_ui_code": { "title": "string", "description": "string", "category": "SaaS" | "School" | "Business" | "Portfolio" } — Code complete standalone responsive HTML/Tailwind landing page or website and launch Live Preview Studio.
 - "search_web_information": { "query": "string", "extractContacts": true } — Search web / databases for businesses, schools, leads, contacts, emails, phone numbers.
 - "extract_contact_leads": { "query": "string", "content": "string" } — Parse HTML / text to extract clean lists of email addresses, phone numbers, and company names.
 - "open_browser_url": { "url": "string", "task": "string" } — Open target website in autonomous Agent Browser.
@@ -103,13 +104,14 @@ Available Tools:
 - "sync_casjoe_biz": {} — Synchronize data.
 
 Rules:
-1. If the goal asks to search Google/web, find schools/leads/contacts, or extract emails/phones: Use "search_web_information" or "open_browser_url" -> then "extract_contact_leads" -> then "write_local_file" with a concrete filePath (e.g. schools_in_port_harcourt.txt).
-2. NEVER use search_long_term_memory for fresh web searches or data extraction.
-3. Respond ONLY with a valid JSON object:
+1. If the goal asks to design, code, or build a landing page, website, UI component, dashboard, or frontend page: Assign to Coding Agent with tool "generate_ui_code"! DO NOT search web for design templates or open external website builder tools.
+2. If the goal asks to search Google/web, find schools/leads/contacts, or extract emails/phones: Use "search_web_information" or "open_browser_url" -> then "extract_contact_leads" -> then "write_local_file" with a concrete filePath (e.g. schools_in_port_harcourt.txt).
+3. NEVER use search_long_term_memory for fresh web searches or data extraction.
+4. Respond ONLY with a valid JSON object:
 {
   "summary": "Brief summary of plan",
   "steps": [
-    { "step": 1, "agent": "Desktop Agent", "action": "Clear description of action", "tool": "tool_name", "args": { ... } }
+    { "step": 1, "agent": "Coding Agent" | "Desktop Agent" | "Finance & CRM Agent" | "Casjoe Biz Agent", "action": "Clear description of action", "tool": "tool_name", "args": { ... } }
   ]
 }`;
 
@@ -124,7 +126,15 @@ Rules:
         planData = JSON.parse(jsonMatch ? jsonMatch[0] : planRes.content);
       } catch {
         const lower = userGoal.toLowerCase();
-        if (lower.includes('school') || lower.includes('search') || lower.includes('google') || lower.includes('extract') || lower.includes('email') || lower.includes('phone') || lower.includes('lead')) {
+        if (lower.includes('landing page') || lower.includes('website') || lower.includes('landingpage') || lower.includes('design a page') || lower.includes('build a website') || lower.includes('code a page') || lower.includes('frontend') || lower.includes('web app') || lower.includes('portfolio') || lower.includes('ui design')) {
+          planData = {
+            summary: `Code complete responsive landing page for "${userGoal}" and launch Live Studio preview`,
+            steps: [
+              { step: 1, agent: 'Coding Agent', action: `Generate full responsive HTML/Tailwind landing page for: ${userGoal}`, tool: 'generate_ui_code', args: { title: userGoal, description: userGoal } },
+              { step: 2, agent: 'Coding Agent', action: 'Save standalone index.html to local workspace & open Live Code Studio', tool: 'write_local_file', args: { filePath: 'landing_page.html' } }
+            ]
+          };
+        } else if (lower.includes('school') || lower.includes('search') || lower.includes('google') || lower.includes('extract') || lower.includes('email') || lower.includes('phone') || lower.includes('lead')) {
           const defaultFilename = lower.includes('port harcourt') ? 'schools_in_port_harcourt.txt' : 'extracted_contacts.txt';
           planData = {
             summary: `Search web for ${userGoal}, extract verified contacts, and save to ${defaultFilename}`,

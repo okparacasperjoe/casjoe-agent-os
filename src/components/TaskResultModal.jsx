@@ -73,6 +73,16 @@ export default function TaskResultModal({ isOpen, onClose, taskResult }) {
     }
   };
 
+  const isHtmlDeliverable = baseFileName.endsWith('.html') || (contentText && (contentText.includes('<!DOCTYPE') || contentText.includes('<html') || contentText.includes('<body')));
+
+  const handleOpenCodeStudio = () => {
+    const html = taskResult.deliverableHtml || contentText;
+    window.dispatchEvent(new CustomEvent('casjoe:open-code-studio', {
+      detail: { code: html }
+    }));
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="bg-[#0B1222] border border-amber-500/40 rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4 flex flex-col max-h-[90vh]">
@@ -154,12 +164,22 @@ export default function TaskResultModal({ isOpen, onClose, taskResult }) {
               {copied ? 'Copied!' : 'Copy'}
             </button>
 
+            {isHtmlDeliverable && (
+              <button
+                onClick={handleOpenCodeStudio}
+                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-400 hover:from-amber-400 hover:to-orange-300 text-slate-950 text-xs font-bold rounded-xl shadow-lg shadow-orange-500/20 transition"
+              >
+                <Sparkles className="w-4 h-4" />
+                ⚡ Live Code Studio Preview
+              </button>
+            )}
+
             <button
               onClick={handleOpenSystemEditor}
-              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl transition shadow-lg shadow-amber-500/20"
+              className="flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition"
             >
               <ExternalLink className="w-4 h-4" />
-              Open in System App
+              Open File
             </button>
           </div>
         </div>
