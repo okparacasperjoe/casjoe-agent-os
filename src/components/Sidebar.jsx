@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, Wallet, Sparkles, FileText, Cpu, Settings, 
   Package, ShoppingCart, BookOpen, Bot, Globe, Compass, ChevronDown, ChevronRight,
-  Layers, Building2, Receipt, Truck, FolderKanban, CheckSquare
+  Layers, Building2, Receipt, Truck, FolderKanban, CheckSquare,
+  PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import casjoeLogo from '../assets/casjoelogo.png';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, isCollapsed = false, onToggleCollapse }) {
   const erpSubItemIds = [
     'crm', 'finance', 'expenses', 'inventory', 'pos', 
     'procurement', 'projects', 'tasks', 'hr', 'documents', 'erp'
@@ -50,8 +51,102 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
+  // -------------------------------------------------------------
+  // Compact Icon-Only Rail Mode (Collapsed)
+  // -------------------------------------------------------------
+  if (isCollapsed) {
+    return (
+      <aside className="w-16 bg-[#070B15] border-r border-white/10 flex flex-col justify-between p-2 shrink-0 hidden md:flex min-h-[calc(100vh-61px)] select-none transition-all duration-200">
+        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-none flex flex-col items-center">
+          {/* Top Main Navigation Items */}
+          {topNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                title={`${item.label}${item.badge ? ` (${item.badge})` : ''}`}
+                className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all relative ${
+                  isActive
+                    ? 'bg-[#111A30] text-[#FF9F00] shadow-md shadow-orange-500/10 border border-[#FF9F00]/40'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-2 bottom-2 w-1 bg-[#FF9F00] rounded-r-md" />
+                )}
+                <Icon className={`w-5 h-5 ${isActive ? 'text-[#FF9F00]' : 'text-slate-400'}`} />
+              </button>
+            );
+          })}
+
+          <div className="w-8 h-px bg-white/10 my-1" />
+
+          {/* ERP Hub Trigger / Icon */}
+          <button
+            onClick={() => setActiveTab('erp')}
+            title="ERP Enterprise Suite (Click to open ERP Hub)"
+            className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all relative ${
+              isErpChildActive
+                ? 'bg-[#111A30] text-[#FF9F00] shadow-md shadow-orange-500/10 border border-[#FF9F00]/40'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            {isErpChildActive && (
+              <span className="absolute left-0 top-2 bottom-2 w-1 bg-[#FF9F00] rounded-r-md" />
+            )}
+            <Layers className={`w-5 h-5 ${isErpChildActive ? 'text-[#FF9F00]' : 'text-slate-400'}`} />
+          </button>
+
+          <div className="w-8 h-px bg-white/10 my-1" />
+
+          {/* Bottom Settings & Performance */}
+          {bottomNavItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                title={item.label}
+                className={`w-11 h-11 flex items-center justify-center rounded-xl transition-all relative ${
+                  isActive
+                    ? 'bg-[#111A30] text-[#FF9F00] shadow-md shadow-orange-500/10 border border-[#FF9F00]/40'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-2 bottom-2 w-1 bg-[#FF9F00] rounded-r-md" />
+                )}
+                <Icon className={`w-5 h-5 ${isActive ? 'text-[#FF9F00]' : 'text-slate-400'}`} />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bottom Expand Toggle Button */}
+        <div className="pt-2 border-t border-white/5 flex flex-col items-center gap-2">
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              title="Expand Sidebar"
+              className="w-10 h-10 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-[#FF9F00] flex items-center justify-center transition"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+          )}
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="System Online" />
+        </div>
+      </aside>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // Full Expanded Sidebar Mode (Default)
+  // -------------------------------------------------------------
   return (
-    <aside className="w-60 bg-[#070B15] border-r border-white/10 flex flex-col justify-between p-3.5 shrink-0 hidden md:flex min-h-[calc(100vh-61px)] select-none">
+    <aside className="w-60 bg-[#070B15] border-r border-white/10 flex flex-col justify-between p-3.5 shrink-0 hidden md:flex min-h-[calc(100vh-61px)] select-none transition-all duration-200">
       <div className="space-y-1 mt-1 overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-thin scrollbar-thumb-slate-800 pr-1">
         {/* Main Workspace Navigation */}
         <div className="space-y-1">
@@ -176,7 +271,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         </div>
       </div>
 
-      {/* Bottom Left Logo Badge */}
+      {/* Bottom Left Logo Badge & Collapse Button */}
       <div className="pt-3 border-t border-white/5 px-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[#090E1B] border border-[#FF9F00]/30 flex items-center justify-center p-1 opacity-90">
@@ -184,7 +279,19 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           </div>
           <div className="text-[10px] font-mono text-slate-500">v1.0.2</div>
         </div>
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="System Online" />
+
+        <div className="flex items-center gap-2">
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              title="Collapse Sidebar (Widescreen Mode)"
+              className="p-1 text-slate-400 hover:text-[#FF9F00] hover:bg-white/5 rounded-lg transition"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </button>
+          )}
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="System Online" />
+        </div>
       </div>
     </aside>
   );

@@ -134,7 +134,13 @@ export default function App() {
     }
   }, [isDarkMode]);
 
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  const toggleTheme = () => {
+    setIsDarkMode(prev => {
+      const next = !prev;
+      localStorage.setItem('theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
 
   const handleOnboardingComplete = () => {
     localStorage.setItem('onboardingCompleted', 'true');
@@ -162,15 +168,22 @@ export default function App() {
         onOpenSettings={() => setActiveTab('settings')}
         isDarkMode={isDarkMode}
         toggleTheme={toggleTheme}
+        isSidebarCollapsed={isSidebarCollapsed}
+        toggleSidebar={toggleSidebar}
       />
 
       {/* Main Layout Container */}
-      <div className="flex flex-1 w-full">
+      <div className="flex flex-1 w-full overflow-hidden">
         {/* Navigation Sidebar */}
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
+        />
 
         {/* Content Workspace Area with Lazy Loading & Error Isolation */}
-        <main className="flex-1 bg-[#0A0F1D] overflow-y-auto pb-12">
+        <main className="flex-1 bg-[#0A0F1D] overflow-y-auto pb-12 transition-all">
           <ErrorBoundary>
             <Suspense fallback={<TabLoader />}>
               {activeTab === 'agent-os' && (
