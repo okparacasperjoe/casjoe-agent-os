@@ -1,4 +1,4 @@
-﻿name: Multi-Platform Release Build
+name: Multi-Platform Release Build
 
 on:
   workflow_dispatch:
@@ -64,11 +64,13 @@ jobs:
             app-dist-win/*.deb
           if-no-files-found: ignore
 
-      - name: Attach to Release (v1.0.2)
+      - name: Attach to Release
         uses: softprops/action-gh-release@v2
         if: always()
         with:
-          tag_name: v1.0.2
+          tag_name: ${{ github.ref_name }}
+          name: Casjoe Agent OS ${{ github.ref_name }}
+          generate_release_notes: true
           files: |
             app-dist-win/*.exe
             app-dist-win/*.dmg
