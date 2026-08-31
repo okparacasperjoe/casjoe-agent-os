@@ -26,7 +26,6 @@ export default function Sidebar({ activeTab, setActiveTab, isCollapsed = false, 
   const topNavItems = [
     { id: 'agent-os', label: 'Agent OS', icon: Bot, badge: 'CEO' },
     { id: 'agent-browser', label: 'Agent Browser', icon: Compass, badge: 'MANUS' },
-    { id: 'code-studio', label: 'AI Code & UI Studio', icon: Code, badge: 'LIVE' },
     { id: 'casjoe-biz', label: 'Casjoe Biz', icon: Globe },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'chat', label: 'AI Chat', icon: Sparkles },

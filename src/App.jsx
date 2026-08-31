@@ -11,7 +11,6 @@ import { syncAll } from './services/erpSync';
 // Lazy-loaded workspace components for code-splitting and faster startup
 const AgentOSView = lazy(() => import('./components/AgentOSView'));
 const AgentBrowserView = lazy(() => import('./components/AgentBrowserView'));
-const CodeStudioView = lazy(() => import('./components/CodeStudioView'));
 const CasjoeBizView = lazy(() => import('./components/CasjoeBizView'));
 const DashboardView = lazy(() => import('./components/DashboardView'));
 const PerformanceView = lazy(() => import('./components/PerformanceView'));
@@ -79,21 +78,6 @@ export default function App() {
       return next;
     });
   };
-
-  // Code Studio Initial Code State
-  const [codeStudioInitialCode, setCodeStudioInitialCode] = useState(null);
-
-  // Listen for Code Studio open events from Agents / Tools
-  useEffect(() => {
-    const handleOpenCodeStudio = (e) => {
-      if (e?.detail?.code) {
-        setCodeStudioInitialCode(e.detail.code);
-      }
-      setActiveTab('code-studio');
-    };
-    window.addEventListener('casjoe:open-code-studio', handleOpenCodeStudio);
-    return () => window.removeEventListener('casjoe:open-code-studio', handleOpenCodeStudio);
-  }, []);
 
   // Background ERP Sync on Network Reconnect
   useEffect(() => {
@@ -221,13 +205,6 @@ export default function App() {
 
               {activeTab === 'agent-browser' && (
                 <AgentBrowserView />
-              )}
-
-              {activeTab === 'code-studio' && (
-                <CodeStudioView 
-                  initialCode={codeStudioInitialCode} 
-                  onNavigateTab={setActiveTab} 
-                />
               )}
 
               {activeTab === 'casjoe-biz' && (

@@ -508,17 +508,12 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
           createdAt: new Date().toISOString()
         }).catch(() => {});
 
-        // Dispatch live event to open code studio
-        window.dispatchEvent(new CustomEvent('casjoe:open-code-studio', {
-          detail: { code: generatedHtml }
-        }));
-
         return {
           success: true,
           deliverableFile: 'landing_page.html',
           deliverableHtml: generatedHtml,
           content: generatedHtml,
-          summary: `Successfully coded a complete responsive HTML/Tailwind landing page for "${title}". Live Code Studio Preview is ready!`
+          summary: `Successfully generated a complete responsive HTML/Tailwind landing page for "${title}". Saved to Document Vault!`
         };
       }
       case 'search_web_information': {
