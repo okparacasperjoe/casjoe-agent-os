@@ -19,8 +19,13 @@ const PromptsView = lazy(() => import('./components/PromptsView'));
 const ChatView = lazy(() => import('./components/ChatView'));
 const CRMView = lazy(() => import('./components/CRMView'));
 const FinanceView = lazy(() => import('./components/FinanceView'));
+const ExpensesView = lazy(() => import('./components/ExpensesView'));
 const InventoryView = lazy(() => import('./components/InventoryView'));
 const POSView = lazy(() => import('./components/POSView'));
+const ProcurementView = lazy(() => import('./components/ProcurementView'));
+const ProjectView = lazy(() => import('./components/ProjectView'));
+const TaskView = lazy(() => import('./components/TaskView'));
+const HRView = lazy(() => import('./components/HRView'));
 const ERPView = lazy(() => import('./components/ERPView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 
@@ -236,6 +241,12 @@ export default function App() {
                 />
               )}
 
+              {activeTab === 'expenses' && (
+                <ExpensesView
+                  onOpenAddExpense={() => setActiveModal('addExpense')}
+                />
+              )}
+
               {activeTab === 'inventory' && (
                 <InventoryView
                   inventory={inventory}
@@ -247,6 +258,31 @@ export default function App() {
                 <POSView inventory={inventory} />
               )}
 
+              {activeTab === 'procurement' && (
+                <ProcurementView
+                  onOpenAddVendor={() => setActiveModal('addVendor')}
+                  onOpenAddPO={() => setActiveModal('addPO')}
+                />
+              )}
+
+              {activeTab === 'projects' && (
+                <ProjectView
+                  onOpenAddProject={() => setActiveModal('addProject')}
+                />
+              )}
+
+              {activeTab === 'tasks' && (
+                <TaskView
+                  onOpenAddTask={() => setActiveModal('addTask')}
+                />
+              )}
+
+              {activeTab === 'hr' && (
+                <HRView
+                  onOpenAddEmployee={() => setActiveModal('addEmployee')}
+                />
+              )}
+
               {activeTab === 'erp' && (
                 <ERPView
                   customers={customers}
@@ -255,8 +291,14 @@ export default function App() {
                   documents={documents}
                   onOpenAddCustomer={() => setActiveModal('addCustomer')}
                   onOpenCreateInvoice={() => setActiveModal('createInvoice')}
+                  onOpenAddExpense={() => setActiveModal('addExpense')}
                   onOpenAddInventory={() => setActiveModal('addInventory')}
                   onOpenUploadDoc={() => setActiveModal('uploadDoc')}
+                  onOpenAddProject={() => setActiveModal('addProject')}
+                  onOpenAddTask={() => setActiveModal('addTask')}
+                  onOpenAddVendor={() => setActiveModal('addVendor')}
+                  onOpenAddPO={() => setActiveModal('addPO')}
+                  onOpenAddEmployee={() => setActiveModal('addEmployee')}
                 />
               )}
 

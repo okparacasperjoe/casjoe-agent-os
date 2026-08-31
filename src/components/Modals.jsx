@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
-import { X, UserPlus, FileText, CheckSquare, Sparkles, Upload, CheckCircle2, Building2, MapPin, Phone, DollarSign, Package } from 'lucide-react';
+import { 
+  X, UserPlus, FileText, CheckSquare, Sparkles, Upload, 
+  CheckCircle2, Building2, MapPin, Phone, DollarSign, Package, 
+  Receipt, Truck, FolderKanban, Users, Mail, Calendar 
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { addCustomer, addInvoice, addDocument, addInventoryItem } from '../db/hooks';
+import { 
+  addCustomer, addInvoice, addDocument, addInventoryItem,
+  addProject, addTask, addExpense, addVendor, addPurchaseOrder, addEmployee,
+  useProjects, useVendors
+} from '../db/hooks';
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Robust worker configuration for Vite
@@ -11,6 +19,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 export default function Modals({ activeModal, onCloseModal, customers = [] }) {
+  const existingProjects = useProjects() || [];
+  const existingVendors = useVendors() || [];
+
   // Add Customer State
   const [customerData, setCustomerData] = useState({
     name: '',
@@ -39,7 +50,69 @@ export default function Modals({ activeModal, onCloseModal, customers = [] }) {
   });
 
   // Add Task State
-  const [taskTitle, setTaskTitle] = useState('');
+  const [taskData, setTaskData] = useState({
+    title: '',
+    projectId: '',
+    assignedTo: '',
+    priority: 'Medium',
+    dueDate: '',
+    description: ''
+  });
+
+  // Add Project State
+  const [projectData, setProjectData] = useState({
+    name: '',
+    client: '',
+    budget: '',
+    currency: 'NGN',
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
+    description: ''
+  });
+
+  // Add Expense State
+  const [expenseData, setExpenseData] = useState({
+    title: '',
+    category: 'Utilities',
+    amount: '',
+    currency: 'NGN',
+    paymentMethod: 'Bank Transfer',
+    reference: '',
+    notes: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+
+  // Add Vendor State
+  const [vendorData, setVendorData] = useState({
+    name: '',
+    contactPerson: '',
+    email: '',
+    phone: '',
+    address: '',
+    category: 'Hardware & Components'
+  });
+
+  // Add Purchase Order State
+  const [poData, setPoData] = useState({
+    vendorName: '',
+    items: '',
+    totalAmount: '',
+    currency: 'NGN',
+    expectedDate: '',
+    orderDate: new Date().toISOString().split('T')[0]
+  });
+
+  // Add Employee State
+  const [employeeData, setEmployeeData] = useState({
+    name: '',
+    role: '',
+    department: 'Engineering',
+    salary: '',
+    currency: 'NGN',
+    email: '',
+    phone: '',
+    joinDate: new Date().toISOString().split('T')[0]
+  });
 
   // AI Report State
   const [reportType, setReportType] = useState('Sales & Revenue');
@@ -71,6 +144,60 @@ export default function Modals({ activeModal, onCloseModal, customers = [] }) {
     await addInventoryItem({
       ...inventoryData,
       status
+    });
+    onCloseModal();
+  };
+
+  const handleProjectSubmit = async (e) => {
+    e.preventDefault();
+    if (!projectData.name) return;
+    await addProject({
+      ...projectData,
+      budget: parseFloat(projectData.budget) || 0
+    });
+    onCloseModal();
+  };
+
+  const handleTaskSubmit = async (e) => {
+    e.preventDefault();
+    if (!taskData.title) return;
+    await addTask({
+      ...taskData,
+      projectId: taskData.projectId ? parseInt(taskData.projectId, 10) : undefined
+    });
+    onCloseModal();
+  };
+
+  const handleExpenseSubmit = async (e) => {
+    e.preventDefault();
+    if (!expenseData.title || !expenseData.amount) return;
+    await addExpense({
+      ...expenseData,
+      amount: parseFloat(expenseData.amount) || 0
+    });
+    onCloseModal();
+  };
+
+  const handleVendorSubmit = async (e) => {
+    e.preventDefault();
+    if (!vendorData.name) return;
+    await addVendor(vendorData);
+    onCloseModal();
+  };
+
+  const handlePOSubmit = async (e) => {
+    e.preventDefault();
+    if (!poData.vendorName || !poData.items) return;
+    await addPurchaseOrder(poData);
+    onCloseModal();
+  };
+
+  const handleEmployeeSubmit = async (e) => {
+    e.preventDefault();
+    if (!employeeData.name || !employeeData.salary) return;
+    await addEmployee({
+      ...employeeData,
+      salary: parseFloat(employeeData.salary) || 0
     });
     onCloseModal();
   };
@@ -163,7 +290,7 @@ export default function Modals({ activeModal, onCloseModal, customers = [] }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onCloseModal}>
-      <div className="bg-[#0C1222] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-[#0C1222] border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4">
           <div className="flex items-center gap-2">
@@ -171,6 +298,11 @@ export default function Modals({ activeModal, onCloseModal, customers = [] }) {
               {activeModal === 'addCustomer' && <UserPlus className="w-4 h-4" />}
               {activeModal === 'createInvoice' && <FileText className="w-4 h-4" />}
               {activeModal === 'addTask' && <CheckSquare className="w-4 h-4" />}
+              {activeModal === 'addProject' && <FolderKanban className="w-4 h-4" />}
+              {activeModal === 'addExpense' && <Receipt className="w-4 h-4" />}
+              {activeModal === 'addVendor' && <Truck className="w-4 h-4" />}
+              {activeModal === 'addPO' && <Truck className="w-4 h-4" />}
+              {activeModal === 'addEmployee' && <Users className="w-4 h-4" />}
               {activeModal === 'aiReport' && <Sparkles className="w-4 h-4" />}
               {activeModal === 'uploadDoc' && <Upload className="w-4 h-4" />}
               {activeModal === 'addInventory' && <Package className="w-4 h-4" />}
@@ -179,6 +311,11 @@ export default function Modals({ activeModal, onCloseModal, customers = [] }) {
               {activeModal === 'addCustomer' && 'Add New Customer'}
               {activeModal === 'createInvoice' && 'Generate Invoice'}
               {activeModal === 'addTask' && 'Add Action Task'}
+              {activeModal === 'addProject' && 'Create New Project'}
+              {activeModal === 'addExpense' && 'Log Business Expense'}
+              {activeModal === 'addVendor' && 'Register New Vendor'}
+              {activeModal === 'addPO' && 'Create Purchase Order (PO)'}
+              {activeModal === 'addEmployee' && 'Add New Employee'}
               {activeModal === 'aiReport' && 'Generate AI Report'}
               {activeModal === 'uploadDoc' && 'Upload Local Document'}
               {activeModal === 'addInventory' && 'Add Inventory Item'}
@@ -336,24 +473,510 @@ export default function Modals({ activeModal, onCloseModal, customers = [] }) {
           </form>
         )}
 
-        {/* Modal 3: Add Task */}
-        {activeModal === 'addTask' && (
-          <form onSubmit={(e) => { e.preventDefault(); onCloseModal(); }} className="space-y-4">
+        {/* Modal: Add Project */}
+        {activeModal === 'addProject' && (
+          <form onSubmit={handleProjectSubmit} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-xs text-slate-300 font-semibold">Task Description</label>
+              <label className="text-xs text-slate-300 font-semibold">Project Title</label>
               <input
                 type="text"
                 required
-                value={taskTitle}
-                onChange={(e) => setTaskTitle(e.target.value)}
-                placeholder="e.g. Audit offline database backup before weekly sync"
+                value={projectData.name}
+                onChange={(e) => setProjectData({ ...projectData, name: e.target.value })}
+                placeholder="e.g. Solar AI Hub Deployment"
+                className="custom-input"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Client / Organization</label>
+                <input
+                  type="text"
+                  value={projectData.client}
+                  onChange={(e) => setProjectData({ ...projectData, client: e.target.value })}
+                  placeholder="e.g. Kano Community Clinic"
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Budget (₦)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={projectData.budget}
+                  onChange={(e) => setProjectData({ ...projectData, budget: e.target.value })}
+                  placeholder="e.g. 4500000"
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Start Date</label>
+                <input
+                  type="date"
+                  value={projectData.startDate}
+                  onChange={(e) => setProjectData({ ...projectData, startDate: e.target.value })}
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Target Deadline</label>
+                <input
+                  type="date"
+                  value={projectData.endDate}
+                  onChange={(e) => setProjectData({ ...projectData, endDate: e.target.value })}
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Project Scope / Details</label>
+              <textarea
+                rows={2}
+                value={projectData.description}
+                onChange={(e) => setProjectData({ ...projectData, description: e.target.value })}
+                placeholder="Deliverables, milestones, and hardware configs..."
                 className="custom-input"
               />
             </div>
 
             <div className="flex justify-end gap-3 pt-3">
               <button type="button" onClick={onCloseModal} className="btn-secondary text-xs">Cancel</button>
-              <button type="submit" className="btn-primary text-xs">Add Action Item</button>
+              <button type="submit" className="btn-primary text-xs">Create Project</button>
+            </div>
+          </form>
+        )}
+
+        {/* Modal: Add Task */}
+        {activeModal === 'addTask' && (
+          <form onSubmit={handleTaskSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Task Title</label>
+              <input
+                type="text"
+                required
+                value={taskData.title}
+                onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
+                placeholder="e.g. Configure ESC/POS thermal receipt printer"
+                className="custom-input"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Link to Project</label>
+                <select
+                  value={taskData.projectId}
+                  onChange={(e) => setTaskData({ ...taskData, projectId: e.target.value })}
+                  className="custom-select w-full"
+                >
+                  <option value="">(No linked project)</option>
+                  {existingProjects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Priority</label>
+                <select
+                  value={taskData.priority}
+                  onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
+                  className="custom-select w-full"
+                >
+                  <option value="High">High Priority</option>
+                  <option value="Medium">Medium Priority</option>
+                  <option value="Low">Low Priority</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Assigned To</label>
+                <input
+                  type="text"
+                  value={taskData.assignedTo}
+                  onChange={(e) => setTaskData({ ...taskData, assignedTo: e.target.value })}
+                  placeholder="e.g. Amina Bello"
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Due Date</label>
+                <input
+                  type="date"
+                  value={taskData.dueDate}
+                  onChange={(e) => setTaskData({ ...taskData, dueDate: e.target.value })}
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Task Description (Optional)</label>
+              <textarea
+                rows={2}
+                value={taskData.description}
+                onChange={(e) => setTaskData({ ...taskData, description: e.target.value })}
+                placeholder="Additional instructions or acceptance criteria..."
+                className="custom-input"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3">
+              <button type="button" onClick={onCloseModal} className="btn-secondary text-xs">Cancel</button>
+              <button type="submit" className="btn-primary text-xs">Save Task</button>
+            </div>
+          </form>
+        )}
+
+        {/* Modal: Add Expense */}
+        {activeModal === 'addExpense' && (
+          <form onSubmit={handleExpenseSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Expense Title / Description</label>
+              <input
+                type="text"
+                required
+                value={expenseData.title}
+                onChange={(e) => setExpenseData({ ...expenseData, title: e.target.value })}
+                placeholder="e.g. Lagos Warehouse Electricity & Solar Inverter Service"
+                className="custom-input"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Category</label>
+                <select
+                  value={expenseData.category}
+                  onChange={(e) => setExpenseData({ ...expenseData, category: e.target.value })}
+                  className="custom-select w-full"
+                >
+                  <option value="Utilities">Utilities</option>
+                  <option value="Logistics">Logistics & Freight</option>
+                  <option value="Salaries">Staff Allowances / Salaries</option>
+                  <option value="Supplies">Supplies & Consumables</option>
+                  <option value="Rent">Rent & Facilities</option>
+                  <option value="Marketing">Marketing & Sales</option>
+                  <option value="Maintenance">Maintenance & Repairs</option>
+                  <option value="Legal & Tax">Legal & Compliance</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Amount (₦)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={expenseData.amount}
+                  onChange={(e) => setExpenseData({ ...expenseData, amount: e.target.value })}
+                  placeholder="e.g. 350000"
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Payment Method</label>
+                <select
+                  value={expenseData.paymentMethod}
+                  onChange={(e) => setExpenseData({ ...expenseData, paymentMethod: e.target.value })}
+                  className="custom-select w-full"
+                >
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cash">Cash</option>
+                  <option value="POS Card">POS / Card</option>
+                  <option value="Direct Debit">Direct Debit</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Reference Code (Optional)</label>
+                <input
+                  type="text"
+                  value={expenseData.reference}
+                  onChange={(e) => setExpenseData({ ...expenseData, reference: e.target.value })}
+                  placeholder="e.g. EXP-2026-05"
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Notes (Optional)</label>
+              <input
+                type="text"
+                value={expenseData.notes}
+                onChange={(e) => setExpenseData({ ...expenseData, notes: e.target.value })}
+                placeholder="Additional details or receipt memo..."
+                className="custom-input"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3">
+              <button type="button" onClick={onCloseModal} className="btn-secondary text-xs">Cancel</button>
+              <button type="submit" className="btn-primary text-xs">Log Expense</button>
+            </div>
+          </form>
+        )}
+
+        {/* Modal: Add Vendor */}
+        {activeModal === 'addVendor' && (
+          <form onSubmit={handleVendorSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Supplier / Vendor Business Name</label>
+              <input
+                type="text"
+                required
+                value={vendorData.name}
+                onChange={(e) => setVendorData({ ...vendorData, name: e.target.value })}
+                placeholder="e.g. SunPower Africa Renewable Ltd"
+                className="custom-input"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Contact Person</label>
+                <input
+                  type="text"
+                  value={vendorData.contactPerson}
+                  onChange={(e) => setVendorData({ ...vendorData, contactPerson: e.target.value })}
+                  placeholder="e.g. Grace Adewale"
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Category</label>
+                <input
+                  type="text"
+                  value={vendorData.category}
+                  onChange={(e) => setVendorData({ ...vendorData, category: e.target.value })}
+                  placeholder="e.g. Energy & Solar"
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Phone Number</label>
+                <input
+                  type="text"
+                  value={vendorData.phone}
+                  onChange={(e) => setVendorData({ ...vendorData, phone: e.target.value })}
+                  placeholder="+234 812 444 9900"
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Email Address</label>
+                <input
+                  type="email"
+                  value={vendorData.email}
+                  onChange={(e) => setVendorData({ ...vendorData, email: e.target.value })}
+                  placeholder="orders@sunpowerafrica.com"
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Physical Address</label>
+              <input
+                type="text"
+                value={vendorData.address}
+                onChange={(e) => setVendorData({ ...vendorData, address: e.target.value })}
+                placeholder="Victoria Island, Lagos"
+                className="custom-input"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3">
+              <button type="button" onClick={onCloseModal} className="btn-secondary text-xs">Cancel</button>
+              <button type="submit" className="btn-primary text-xs">Save Vendor</button>
+            </div>
+          </form>
+        )}
+
+        {/* Modal: Add Purchase Order */}
+        {activeModal === 'addPO' && (
+          <form onSubmit={handlePOSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Select Vendor</label>
+              <select
+                value={poData.vendorName}
+                onChange={(e) => setPoData({ ...poData, vendorName: e.target.value })}
+                className="custom-select w-full"
+                required
+              >
+                {existingVendors.length === 0 ? (
+                  <option value="" disabled>No vendors found. Add a vendor first.</option>
+                ) : (
+                  <>
+                    <option value="" disabled>Select a supplier...</option>
+                    {existingVendors.map(v => (
+                      <option key={v.id} value={v.name}>{v.name} ({v.category || 'Vendor'})</option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Items / Goods Ordered</label>
+              <input
+                type="text"
+                required
+                value={poData.items}
+                onChange={(e) => setPoData({ ...poData, items: e.target.value })}
+                placeholder="e.g. 200W Monocrystalline Solar Panels x 10"
+                className="custom-input"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Total PO Amount (₦)</label>
+                <input
+                  type="text"
+                  required
+                  value={poData.totalAmount}
+                  onChange={(e) => setPoData({ ...poData, totalAmount: e.target.value })}
+                  placeholder="₦950,000"
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Expected Delivery Date</label>
+                <input
+                  type="date"
+                  value={poData.expectedDate}
+                  onChange={(e) => setPoData({ ...poData, expectedDate: e.target.value })}
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3">
+              <button type="button" onClick={onCloseModal} className="btn-secondary text-xs">Cancel</button>
+              <button type="submit" className="btn-primary text-xs">Issue Purchase Order</button>
+            </div>
+          </form>
+        )}
+
+        {/* Modal: Add Employee */}
+        {activeModal === 'addEmployee' && (
+          <form onSubmit={handleEmployeeSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs text-slate-300 font-semibold">Full Employee Name</label>
+              <input
+                type="text"
+                required
+                value={employeeData.name}
+                onChange={(e) => setEmployeeData({ ...employeeData, name: e.target.value })}
+                placeholder="e.g. Zainab Idris"
+                className="custom-input"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Designation / Role</label>
+                <input
+                  type="text"
+                  required
+                  value={employeeData.role}
+                  onChange={(e) => setEmployeeData({ ...employeeData, role: e.target.value })}
+                  placeholder="e.g. Financial Accountant"
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Department</label>
+                <select
+                  value={employeeData.department}
+                  onChange={(e) => setEmployeeData({ ...employeeData, department: e.target.value })}
+                  className="custom-select w-full"
+                >
+                  <option value="Engineering">Engineering</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Procurement">Procurement</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Sales">Sales & Marketing</option>
+                  <option value="Management">Management</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Monthly Basic Salary (₦)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={employeeData.salary}
+                  onChange={(e) => setEmployeeData({ ...employeeData, salary: e.target.value })}
+                  placeholder="700000"
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Join Date</label>
+                <input
+                  type="date"
+                  value={employeeData.joinDate}
+                  onChange={(e) => setEmployeeData({ ...employeeData, joinDate: e.target.value })}
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Email Address</label>
+                <input
+                  type="email"
+                  value={employeeData.email}
+                  onChange={(e) => setEmployeeData({ ...employeeData, email: e.target.value })}
+                  placeholder="zainab.i@casjoe.com"
+                  className="custom-input"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs text-slate-300 font-semibold">Phone Number</label>
+                <input
+                  type="text"
+                  value={employeeData.phone}
+                  onChange={(e) => setEmployeeData({ ...employeeData, phone: e.target.value })}
+                  placeholder="+234 808 333 4455"
+                  className="custom-input"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3">
+              <button type="button" onClick={onCloseModal} className="btn-secondary text-xs">Cancel</button>
+              <button type="submit" className="btn-primary text-xs">Add Employee</button>
             </div>
           </form>
         )}

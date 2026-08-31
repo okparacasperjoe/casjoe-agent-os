@@ -187,6 +187,84 @@ export const AGENT_TOOL_DEFINITIONS = [
       },
       required: ['totalAmount', 'items']
     }
+  },
+  {
+    name: 'manage_project',
+    description: 'Create a new business project or milestone tracking record in the local offline database.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Project title/name.' },
+        client: { type: 'string', description: 'Client or company name.' },
+        budget: { type: 'number', description: 'Budget amount numeric.' },
+        currency: { type: 'string', description: 'Currency code (NGN, USD, KES, GHS).' },
+        description: { type: 'string', description: 'Deliverables or scope summary.' },
+        endDate: { type: 'string', description: 'Target deadline YYYY-MM-DD.' }
+      },
+      required: ['name']
+    }
+  },
+  {
+    name: 'manage_task',
+    description: 'Add an action task or Kanban card to the offline operational workspace.',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Task title or action item description.' },
+        priority: { type: 'string', description: 'Priority: High | Medium | Low' },
+        assignedTo: { type: 'string', description: 'Team member or assignee name.' },
+        dueDate: { type: 'string', description: 'Due date YYYY-MM-DD.' },
+        description: { type: 'string', description: 'Detailed instructions or notes.' }
+      },
+      required: ['title']
+    }
+  },
+  {
+    name: 'log_expense',
+    description: 'Log an operational business expenditure into the offline Accounting database.',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Expense description (e.g. Generator Fuel & Solar Inverter Service).' },
+        category: { type: 'string', description: 'Category: Utilities | Logistics | Salaries | Supplies | Rent | Marketing | Maintenance' },
+        amount: { type: 'number', description: 'Expense amount in local currency.' },
+        currency: { type: 'string', description: 'Currency code (default NGN).' },
+        paymentMethod: { type: 'string', description: 'Method: Bank Transfer | Cash | POS Card | Direct Debit' },
+        reference: { type: 'string', description: 'Invoice/receipt reference code.' }
+      },
+      required: ['title', 'amount']
+    }
+  },
+  {
+    name: 'manage_employee',
+    description: 'Register a staff member or employee in the offline HR directory.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Full employee name.' },
+        role: { type: 'string', description: 'Job role or designation.' },
+        department: { type: 'string', description: 'Department: Engineering | Operations | Procurement | Finance | Sales | Management' },
+        salary: { type: 'number', description: 'Monthly salary numeric.' },
+        phone: { type: 'string', description: 'Phone number.' },
+        email: { type: 'string', description: 'Email address.' }
+      },
+      required: ['name', 'role', 'salary']
+    }
+  },
+  {
+    name: 'manage_vendor',
+    description: 'Add a supplier or vendor profile to the offline Procurement database.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Vendor business name.' },
+        contactPerson: { type: 'string', description: 'Representative contact name.' },
+        phone: { type: 'string', description: 'Phone number.' },
+        email: { type: 'string', description: 'Email address.' },
+        category: { type: 'string', description: 'Category of goods supplied.' }
+      },
+      required: ['name']
+    }
   }
 ];
 
@@ -478,6 +556,79 @@ export async function executeAgentTool(toolName, args = {}, onRequestApproval) {
           detail: { url: args.url, task: args.task }
         }));
         return { success: true, url: args.url, task: args.task, note: 'Browser task dispatched' };
+      }
+
+      case 'manage_project': {
+        const id = await db.projects.add({
+          name: args.name,
+          client: args.client || '',
+          budget: parseFloat(args.budget) || 0,
+          currency: args.currency || 'NGN',
+          status: 'In Progress',
+          progress: 0,
+          description: args.description || '',
+          endDate: args.endDate || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        return { success: true, projectId: id, name: args.name, budget: args.budget };
+      }
+
+      case 'manage_task': {
+        const id = await db.tasks.add({
+          title: args.title,
+          priority: args.priority || 'Medium',
+          status: 'To Do',
+          assignedTo: args.assignedTo || 'Unassigned',
+          dueDate: args.dueDate || '',
+          description: args.description || '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        return { success: true, taskId: id, title: args.title, status: 'To Do' };
+      }
+
+      case 'log_expense': {
+        const id = await db.expenses.add({
+          title: args.title,
+          category: args.category || 'Utilities',
+          amount: parseFloat(args.amount) || 0,
+          currency: args.currency || 'NGN',
+          paymentMethod: args.paymentMethod || 'Bank Transfer',
+          reference: args.reference || `EXP-${Date.now().toString().slice(-4)}`,
+          date: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toISOString()
+        });
+        return { success: true, expenseId: id, title: args.title, amount: args.amount };
+      }
+
+      case 'manage_employee': {
+        const id = await db.employees.add({
+          name: args.name,
+          role: args.role,
+          department: args.department || 'Operations',
+          salary: parseFloat(args.salary) || 0,
+          currency: 'NGN',
+          phone: args.phone || '',
+          email: args.email || '',
+          status: 'Active',
+          joinDate: new Date().toISOString().split('T')[0],
+          createdAt: new Date().toISOString()
+        });
+        return { success: true, employeeId: id, name: args.name, role: args.role };
+      }
+
+      case 'manage_vendor': {
+        const id = await db.vendors.add({
+          name: args.name,
+          contactPerson: args.contactPerson || '',
+          phone: args.phone || '',
+          email: args.email || '',
+          category: args.category || 'Supplies',
+          status: 'Active',
+          createdAt: new Date().toISOString()
+        });
+        return { success: true, vendorId: id, name: args.name };
       }
 
       default:

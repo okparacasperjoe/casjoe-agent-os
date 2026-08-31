@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, Wallet, Sparkles, FileText, Cpu, Settings, 
   Package, ShoppingCart, BookOpen, Bot, Globe, Compass, ChevronDown, ChevronRight,
-  Layers, Building2
+  Layers, Building2, Receipt, Truck, FolderKanban, CheckSquare
 } from 'lucide-react';
 import casjoeLogo from '../assets/casjoelogo.png';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
-  const erpSubItemIds = ['crm', 'finance', 'inventory', 'pos', 'documents', 'erp'];
+  const erpSubItemIds = [
+    'crm', 'finance', 'expenses', 'inventory', 'pos', 
+    'procurement', 'projects', 'tasks', 'hr', 'documents', 'erp'
+  ];
   const isErpChildActive = erpSubItemIds.includes(activeTab);
   
   const [isErpOpen, setIsErpOpen] = useState(isErpChildActive || true);
@@ -31,10 +34,15 @@ export default function Sidebar({ activeTab, setActiveTab }) {
   const erpSubItems = [
     { id: 'crm', label: 'CRM & Clients', icon: Users },
     { id: 'finance', label: 'Finance & Invoices', icon: Wallet },
+    { id: 'expenses', label: 'Expenses & P&L', icon: Receipt },
     { id: 'inventory', label: 'Inventory & Stock', icon: Package },
     { id: 'pos', label: 'Point of Sale (POS)', icon: ShoppingCart },
-    { id: 'documents', label: 'Document Vault (Docs)', icon: FileText },
-    { id: 'erp', label: 'ERP Cloud Sync', icon: Building2 },
+    { id: 'procurement', label: 'Procurement & POs', icon: Truck },
+    { id: 'projects', label: 'Projects & Milestones', icon: FolderKanban },
+    { id: 'tasks', label: 'Tasks (Kanban)', icon: CheckSquare },
+    { id: 'hr', label: 'HR & Staff Payroll', icon: Users },
+    { id: 'documents', label: 'Document Vault', icon: FileText },
+    { id: 'erp', label: 'ERP Hub & Sync', icon: Building2 },
   ];
 
   const bottomNavItems = [
