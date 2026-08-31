@@ -199,12 +199,15 @@ const isPureUrl = (input) => {
   };
 
   const [currentAiAction, setCurrentAiAction] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Wire up webview navigation events
   useEffect(() => {
     const wv = webviewRef.current;
     if (!wv) return;
 
+    const onStart   = () => setIsLoading(true);
+    const onStop    = () => setIsLoading(false);
     const onNav     = (e) => {
       const newUrl = e.url || e.validatedURL;
       if (!newUrl) return;
