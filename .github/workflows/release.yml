@@ -1,4 +1,4 @@
-name: Multi-Platform Release Build
+﻿name: Multi-Platform Release Build
 
 on:
   workflow_dispatch:
@@ -33,20 +33,48 @@ jobs:
       - name: Build Web App
         run: npm run build
 
-      - name: Build & Publish Windows
+      - name: Build Windows Packages
         if: matrix.os == 'windows-latest'
-        run: npx electron-builder --win --publish always
+        run: npx electron-builder --win --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Publish macOS
+      - name: Build macOS Packages
         if: matrix.os == 'macos-latest'
-        run: npx electron-builder --mac --publish always
+        run: npx electron-builder --mac --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Publish Linux
+      - name: Build Linux Packages
         if: matrix.os == 'ubuntu-latest'
-        run: npx electron-builder --linux --publish always
+        run: npx electron-builder --linux --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Artifacts to GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.os }}
+          path: |
+            app-dist-win/*.exe
+            app-dist-win/*.dmg
+            app-dist-win/*.zip
+            app-dist-win/*.tar.gz
+            app-dist-win/*.AppImage
+            app-dist-win/*.deb
+          if-no-files-found: ignore
+
+      - name: Attach to Release (v1.0.2)
+        uses: softprops/action-gh-release@v2
+        if: always()
+        with:
+          tag_name: v1.0.2
+          files: |
+            app-dist-win/*.exe
+            app-dist-win/*.dmg
+            app-dist-win/*.zip
+            app-dist-win/*.tar.gz
+            app-dist-win/*.AppImage
+            app-dist-win/*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
