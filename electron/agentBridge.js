@@ -101,12 +101,17 @@ export function setupAgentBridge(mainWindow) {
 
   // 5. Fetch System Information
   ipcMain.handle('agent:get-system-info', async () => {
+    const total = os.totalmem();
+    const free = os.freemem();
     return {
       platform: os.platform(),
       release: os.release(),
       arch: os.arch(),
-      totalMem: (os.totalmem() / (1024 * 1024 * 1024)).toFixed(2) + ' GB',
-      freeMem: (os.freemem() / (1024 * 1024 * 1024)).toFixed(2) + ' GB',
+      totalMem: (total / (1024 * 1024 * 1024)).toFixed(2) + ' GB',
+      freeMem: (free / (1024 * 1024 * 1024)).toFixed(2) + ' GB',
+      totalMemory: total,
+      freeMemory: free,
+      cpuCount: os.cpus().length,
       cpus: os.cpus().length,
       hostname: os.hostname(),
       userInfo: os.userInfo().username,
