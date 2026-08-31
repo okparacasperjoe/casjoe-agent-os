@@ -66,6 +66,19 @@ export default function App() {
     return localStorage.getItem('theme') !== 'light';
   });
 
+  // Sidebar Collapse State (Widescreen Mode)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
   // Background ERP Sync on Network Reconnect
   useEffect(() => {
     const handleOnline = async () => {
