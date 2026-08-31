@@ -1933,7 +1933,7 @@ const isPureUrl = (input) => {
                 </div>
               )}
 
-              <div className="flex-1 relative">
+              <div className="flex-1 w-full h-full relative min-h-0 bg-white overflow-hidden">
                 {isElectron ? (
                   <webview
                     ref={webviewRef}
@@ -1941,7 +1941,7 @@ const isPureUrl = (input) => {
                     src={activeTab.url}
                     partition="persist:casjoe_agent_browser"
                     useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
-                    style={{ width: '100%', height: '100%' }}
+                    style={{ display: 'inline-flex', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: '#ffffff' }}
                     allowpopups="true"
                   />
                 ) : (
@@ -1950,7 +1950,7 @@ const isPureUrl = (input) => {
                     key={activeTab.id}
                     src={activeTab.url}
                     title="Casjoe AI Agent Browser"
-                    className="w-full h-full border-none"
+                    className="w-full h-full border-none absolute inset-0 bg-white"
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                   />
                 )}

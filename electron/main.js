@@ -126,8 +126,12 @@ function createWindow() {
 
   // Also intercept webview will-navigate events for auth pages
   mainWindow.webContents.on('will-attach-webview', (event, webPreferences) => {
-    // Ensure webview uses the browser partition user-agent
+    // Ensure webview uses the browser partition user-agent & supports all web features
     webPreferences.partition = 'persist:casjoe_agent_browser';
+    webPreferences.contextIsolation = false;
+    webPreferences.nodeIntegration = false;
+    webPreferences.webSecurity = false;
+    webPreferences.allowRunningInsecureContent = true;
   });
 
   app.on('web-contents-created', (event, contents) => {
