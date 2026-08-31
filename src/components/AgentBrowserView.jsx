@@ -57,6 +57,8 @@ export default function AgentBrowserView() {
   const [isElectron, setIsElectron] = useState(false);
   const [showCookieModal, setShowCookieModal] = useState(false);
   const [showSchedulesModal, setShowSchedulesModal] = useState(false);
+  const [showTakeoverModal, setShowTakeoverModal] = useState(false);
+  const [takeoverPrompt, setTakeoverPrompt] = useState('');
   const [scheduledRoutines, setScheduledRoutines] = useState([
     {
       id: 'price_monitor',
@@ -1380,6 +1382,13 @@ const isPureUrl = (input) => {
     }
   };
 
+  const handleStartTakeover = async (goal) => {
+    setShowTakeoverModal(false);
+    const targetGoal = (goal || takeoverPrompt).trim() || `Explore active page (${activeTab.url}), click all key links, and extract verified contact data, emails, phones, and pricing to Scratchpad`;
+    setOmnibarText(targetGoal);
+    await runAutomationFlow(targetGoal, activeTab.url);
+  };
+
   const handleOmnibarSubmit = async () => {
     const text = (omnibarText || '').trim();
     if (!text || isAutomating) return;
@@ -1485,6 +1494,17 @@ const isPureUrl = (input) => {
             <Play className={`w-3.5 h-3.5 fill-current ${isAutomating ? 'animate-spin' : ''}`} />
           </button>
         </div>
+
+        {/* Prominent AI Take Over / Autopilot Handover Button */}
+        <button
+          onClick={() => setShowTakeoverModal(true)}
+          disabled={isAutomating}
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition shrink-0 animate-pulse disabled:opacity-50"
+          title="Authorize AI to take over the current tab and continue browsing/scraping autonomously"
+        >
+          <Bot className="w-4 h-4 fill-current" />
+          <span>AI Take Over</span>
+        </button>
 
         {/* Bookmark Quick Icons & Cookie Import & Manus Tools */}
         <div className="flex items-center gap-1.5 border-l border-slate-800 pl-3">
@@ -1671,6 +1691,114 @@ const isPureUrl = (input) => {
         </div>
       )}
 
+      {/* AI Autonomous Takeover & Autopilot Modal */}
+      {showTakeoverModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0B1222] border border-cyan-500/40 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 flex flex-col space-y-4 p-6">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-cyan-500/10 text-cyan-400 rounded-xl border border-cyan-500/20 font-black text-lg">
+                  🤖
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white tracking-tight">AI Autonomous Takeover</h3>
+                  <p className="text-xs text-slate-400">Authorize agent to take over the active tab and execute work</p>
+                </div>
+              </div>
+              <button onClick={() => setShowTakeoverModal(false)} className="p-1.5 text-slate-400 hover:text-white rounded-lg transition">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Current Active Tab Info */}
+            <div className="bg-[#050811] border border-slate-800 p-3 rounded-xl flex items-center gap-3">
+              <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
+              <div className="overflow-hidden text-xs">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Webpage:</span>
+                <span className="text-cyan-300 font-mono font-semibold truncate block">{activeTab.url}</span>
+              </div>
+            </div>
+
+            {/* Quick One-Click Action Presets */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Choose What Agent Should Do:</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleStartTakeover(`Explore current page (${activeTab.url}) and extract all contact leads, emails, phone numbers, and physical addresses to Scratchpad`)}
+                  className="p-3 bg-slate-900/90 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-500/50 rounded-xl text-left transition group"
+                >
+                  <div className="flex items-center gap-2 font-bold text-xs text-white group-hover:text-cyan-300 mb-1">
+                    📊 Extract All Leads
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug">Extract emails, phone numbers & save to structured table.</p>
+                </button>
+
+                <button
+                  onClick={() => handleStartTakeover(`Search & explore top result links, inspect details, and summarize key insights into a markdown intelligence brief`)}
+                  className="p-3 bg-slate-900/90 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-500/50 rounded-xl text-left transition group"
+                >
+                  <div className="flex items-center gap-2 font-bold text-xs text-white group-hover:text-cyan-300 mb-1">
+                    🔍 Explore & Summarize Links
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug">Follow links, inspect sub-pages, and create research report.</p>
+                </button>
+
+                <button
+                  onClick={() => handleStartTakeover(`Extract all pricing plans, fees, products, and specifications into a markdown comparison table`)}
+                  className="p-3 bg-slate-900/90 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-500/50 rounded-xl text-left transition group"
+                >
+                  <div className="flex items-center gap-2 font-bold text-xs text-white group-hover:text-cyan-300 mb-1">
+                    💰 Compare Prices & Specs
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug">Extract packages, features, and rates into Scratchpad.</p>
+                </button>
+
+                <button
+                  onClick={() => handleStartTakeover(`Autofill active form on page with verified business information`)}
+                  className="p-3 bg-slate-900/90 hover:bg-cyan-950/40 border border-slate-800 hover:border-cyan-500/50 rounded-xl text-left transition group"
+                >
+                  <div className="flex items-center gap-2 font-bold text-xs text-white group-hover:text-cyan-300 mb-1">
+                    ✍️ Fill Out Forms & Apply
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-snug">Automatically detect input fields and fill in details.</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Goal Input */}
+            <div className="space-y-1.5 pt-1">
+              <label className="text-[11px] font-bold text-slate-300">Or Give Custom Instructions:</label>
+              <input
+                type="text"
+                value={takeoverPrompt}
+                onChange={(e) => setTakeoverPrompt(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleStartTakeover(takeoverPrompt)}
+                placeholder="e.g. 'Click the admission button, check the fee schedule, and copy the requirements'..."
+                className="w-full bg-[#050811] border border-slate-800 text-xs text-white p-3 rounded-xl focus:outline-none focus:border-cyan-400 font-mono"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+              <button
+                onClick={() => setShowTakeoverModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleStartTakeover(takeoverPrompt)}
+                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg shadow-cyan-500/25 transition"
+              >
+                <Bot className="w-4 h-4 fill-current" />
+                <span>Authorize AI Takeover</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Workspace Area (Viewport + Manus Side Drawer) */}
       <div className="flex-1 flex gap-2 min-h-0 overflow-hidden">
         {/* Main Viewport Container */}
@@ -1825,6 +1953,21 @@ const isPureUrl = (input) => {
                     className="w-full h-full border-none"
                     sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                   />
+                )}
+
+                {/* Floating Autopilot Takeover Pill Button */}
+                {!isNewTabPage && !isAutomating && (
+                  <div className="absolute bottom-6 right-6 z-30 animate-in fade-in slide-in-from-bottom-3 pointer-events-auto">
+                    <button
+                      onClick={() => setShowTakeoverModal(true)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 bg-[#070B15]/95 hover:bg-[#0B1222] border-2 border-cyan-400 text-cyan-300 hover:text-white rounded-2xl shadow-2xl shadow-cyan-500/40 backdrop-blur-md font-extrabold text-xs transition group cursor-pointer"
+                      title="Click to authorize AI to take over browsing and continue autonomously"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                      <Bot className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
+                      <span>AI Take Over / Continue &rarr;</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </>
