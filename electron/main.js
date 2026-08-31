@@ -156,13 +156,23 @@ function createWindow() {
     }
   });
 
-  if (isDev) {
-    // Load Vite dev server
-    mainWindow.loadURL('http://localhost:5173');
-    // mainWindow.webContents.openDevTools();
+  const distHtml = path.join(__dirname, '../dist/index.html');
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error(`[Electron] Failed to load ${validatedURL}: ${errorDescription} (${errorCode})`);
+    if (validatedURL && (validatedURL.includes('localhost:5173') || errorCode === -102)) {
+      mainWindow.loadFile(distHtml).catch(err => console.error('[Electron] Error loading fallback HTML:', err));
+    }
+  });
+
+  if (process.env.VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+  } else if (!app.isPackaged && process.env.NODE_ENV === 'development') {
+    mainWindow.loadURL('http://localhost:5173').catch(() => {
+      mainWindow.loadFile(distHtml);
+    });
   } else {
-    // Load compiled React app
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    mainWindow.loadFile(distHtml);
   }
 
   mainWindow.once('ready-to-show', () => {
