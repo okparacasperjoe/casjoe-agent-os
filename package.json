@@ -1,7 +1,7 @@
 {
   "name": "casjoe-agent-os",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "main": "electron/main.js",
   "author": "Casper Joe Okpara <casperjoeproduction@gmail.com>",
