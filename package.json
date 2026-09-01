@@ -29,7 +29,8 @@
     "pdfjs-dist": "^6.2.108",
     "react": "^19.2.7",
     "react-chartjs-2": "^5.3.1",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "sql.js": "^1.14.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -48,7 +49,9 @@
   },
   "build": {
     "appId": "com.casjoe.agentos",
-    "asarUnpack": ["**/icudtl.dat"],
+    "asarUnpack": [
+      "**/icudtl.dat"
+    ],
     "publish": [
       {
         "provider": "github",
@@ -70,7 +73,10 @@
       "artifactName": "Casjoe-Agent-OS-Setup-${version}-Windows.${ext}"
     },
     "mac": {
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "build/icon.png",
       "category": "public.app-category.productivity",
       "artifactName": "Casjoe-Agent-OS-Setup-${version}-mac.${ext}",
