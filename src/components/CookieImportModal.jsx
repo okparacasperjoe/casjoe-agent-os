@@ -19,14 +19,45 @@ export default function CookieImportModal({ isOpen, onClose, onCookiesImported }
     setSelectedItems(prev => ({ ...prev, [item]: !prev[item] }));
   };
 
+  const getIpcRenderer = () => {
+    if (window.electron && window.electron.ipcRenderer) return window.electron.ipcRenderer;
+    if (typeof window !== 'undefined' && typeof window.require === 'function') {
+      try {
+        const electron = window.require('electron');
+        return electron.ipcRenderer || electron;
+      } catch {}
+    }
+    return null;
+  };
+
   const handleImport = async () => {
     setIsProcessing(true);
-    // Simulate import process since it's an automatic pull in this new design
-    setTimeout(() => {
-      setIsProcessing(false);
-      if (onCookiesImported) onCookiesImported(150);
-      onClose();
-    }, 2000);
+    try {
+      const ipc = getIpcRenderer();
+      if (ipc && ipc.invoke) {
+        const res = await ipc.invoke('agent:auto-import-cookies', { 
+            browser: fromBrowser,
+            items: selectedItems
+        });
+        if (res.success) {
+            if (onCookiesImported) onCookiesImported(res.count);
+        } else {
+            console.error('Import failed:', res.error);
+            alert('Import failed: ' + res.error);
+        }
+      } else {
+          // Web fallback simulation
+          setTimeout(() => {
+            if (onCookiesImported) onCookiesImported(150);
+          }, 2000);
+      }
+    } catch (err) {
+        console.error(err);
+        alert('Error: ' + err.message);
+    } finally {
+        setIsProcessing(false);
+        onClose();
+    }
   };
 
   const CheckboxItem = ({ id, label }) => (
