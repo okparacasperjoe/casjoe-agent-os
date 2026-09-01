@@ -1042,6 +1042,19 @@ const isPureUrl = (input) => {
       // Let cursor glide across screen
       await sleep(speed === 'fast' ? 350 : 650);
 
+      // Fade out cursor slightly so it doesn't obscure content completely while resting
+      await webviewRef.current.executeJavaScript(`
+        (function() {
+          const cursor = document.getElementById('casjoe-ai-cursor');
+          if (cursor) {
+            cursor.style.opacity = '0.4';
+            setTimeout(() => {
+                if (cursor) cursor.style.opacity = '0';
+            }, 3000);
+          }
+        })();
+      `);
+
       // 2. Perform action
       if (type === 'type') {
         const textToType = String(value || '');
@@ -1955,20 +1968,7 @@ const isPureUrl = (input) => {
                   />
                 )}
 
-                {/* Floating Autopilot Takeover Pill Button */}
-                {!isNewTabPage && !isAutomating && (
-                  <div className="absolute bottom-6 right-6 z-30 animate-in fade-in slide-in-from-bottom-3 pointer-events-auto">
-                    <button
-                      onClick={() => setShowTakeoverModal(true)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 bg-[#070B15]/95 hover:bg-[#0B1222] border-2 border-cyan-400 text-cyan-300 hover:text-white rounded-2xl shadow-2xl shadow-cyan-500/40 backdrop-blur-md font-extrabold text-xs transition group cursor-pointer"
-                      title="Click to authorize AI to take over browsing and continue autonomously"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                      <Bot className="w-4 h-4 text-cyan-400 group-hover:scale-110 transition" />
-                      <span>AI Take Over / Continue &rarr;</span>
-                    </button>
-                  </div>
-                )}
+                {/* Floating Autopilot Takeover Pill Button was here - removed to prevent obscuring webview UI like CAPTCHAs */}
               </div>
             </>
           )}
