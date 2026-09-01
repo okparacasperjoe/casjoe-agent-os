@@ -198,18 +198,25 @@ export function setupAgentBridge(mainWindow) {
       // Decrypt DPAPI AES key via PowerShell
       const { execSync } = await import('child_process');
       const psCommand = `
+          $ProgressPreference = 'SilentlyContinue';
           $localState = Get-Content -Raw "${localStatePath}" | ConvertFrom-Json;
           $encryptedKey = [Convert]::FromBase64String($localState.os_crypt.encrypted_key);
           $encryptedKey = $encryptedKey[5..($encryptedKey.Length-1)];
           Add-Type -AssemblyName System.Security;
           $key = [Security.Cryptography.ProtectedData]::Unprotect($encryptedKey, $null, [Security.Cryptography.DataProtectionScope]::CurrentUser);
           [Convert]::ToBase64String($key)
-      `.replace(/\n/g, ' ');
+      `;
 
       let b64Key;
       try {
-          b64Key = execSync(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCommand}"`).toString().trim();
+          const encodedCommand = Buffer.from(psCommand, 'utf16le').toString('base64');
+          const rawOutput = execSync(`powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand ${encodedCommand}`).toString().trim();
+          // PowerShell might output #< CLIXML or other artifacts. The key should be the last line.
+          const lines = rawOutput.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
+          b64Key = lines[lines.length - 1];
+          if (!b64Key || b64Key.includes('<')) throw new Error("Invalid base64 key extracted");
       } catch (err) {
+          console.error("DPAPI Extraction error:", err.message);
           return { success: false, error: 'Failed to decrypt Chrome AES key.' };
       }
 

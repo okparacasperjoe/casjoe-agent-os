@@ -13,6 +13,9 @@ export default function CookieImportModal({ isOpen, onClose, onCookiesImported }
   
   const [fromBrowser, setFromBrowser] = useState('Chrome - Casper');
 
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+
   if (!isOpen) return null;
 
   const toggleItem = (item) => {
@@ -32,6 +35,8 @@ export default function CookieImportModal({ isOpen, onClose, onCookiesImported }
 
   const handleImport = async () => {
     setIsProcessing(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
     try {
       const ipc = getIpcRenderer();
       if (ipc && ipc.invoke) {
@@ -40,23 +45,30 @@ export default function CookieImportModal({ isOpen, onClose, onCookiesImported }
             items: selectedItems
         });
         if (res.success) {
-            if (onCookiesImported) onCookiesImported(res.count);
+            setSuccessMsg(`Successfully imported ${res.count} items.`);
+            setTimeout(() => {
+                if (onCookiesImported) onCookiesImported(res.count);
+                onClose();
+            }, 1500);
         } else {
             console.error('Import failed:', res.error);
-            alert('Import failed: ' + res.error);
+            setErrorMsg(res.error || 'Failed to import cookies.');
         }
       } else {
           // Web fallback simulation
           setTimeout(() => {
-            if (onCookiesImported) onCookiesImported(150);
+            setSuccessMsg(`Successfully imported 150 items.`);
+            setTimeout(() => {
+                if (onCookiesImported) onCookiesImported(150);
+                onClose();
+            }, 1500);
           }, 2000);
       }
     } catch (err) {
         console.error(err);
-        alert('Error: ' + err.message);
+        setErrorMsg(err.message || 'An unexpected error occurred.');
     } finally {
         setIsProcessing(false);
-        onClose();
     }
   };
 
@@ -77,6 +89,17 @@ export default function CookieImportModal({ isOpen, onClose, onCookiesImported }
       <div className="bg-[#242526] border border-slate-700/50 rounded-2xl max-w-[420px] w-full p-6 shadow-2xl">
         <h3 className="text-[17px] font-bold text-white mb-6 tracking-wide">Import from another browser</h3>
         
+        {errorMsg && (
+            <div className="mb-6 p-3 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-2">
+                <span className="text-red-400 text-[13px] leading-tight">{errorMsg}</span>
+            </div>
+        )}
+        {successMsg && (
+            <div className="mb-6 p-3 rounded-xl bg-[#76e5c5]/10 border border-[#76e5c5]/20 flex items-start gap-2">
+                <span className="text-[#76e5c5] text-[13px] leading-tight">{successMsg}</span>
+            </div>
+        )}
+
         <div className="space-y-4 mb-6">
           <div className="flex items-center">
             <span className="text-slate-300 text-[14px] w-12">From</span>
