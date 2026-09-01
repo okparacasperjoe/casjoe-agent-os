@@ -6,10 +6,10 @@ Casjoe Agent OS is an offline, enterprise‑grade business intelligence platform
 
 | Platform | Installer |
 |----------|-----------|
-| **Windows** | [Casjoe‑Agent‑OS‑Setup‑1.0.0‑Windows.exe](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
-| **macOS** | [Casjoe‑Agent‑OS‑Setup‑1.0.0‑mac.dmg](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
-| **Linux (tar.gz)** | [Casjoe‑Agent‑OS‑1.0.0‑Linux.tar.gz](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
-| **Linux (zip)** | [Casjoe‑Agent‑OS‑1.0.0‑Linux.zip](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
+| **Windows** | [Casjoe-Agent-OS-Setup-1.0.5-Windows.exe](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
+| **macOS** | [Casjoe-Agent-OS-Setup-1.0.5-mac.dmg](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
+| **Linux (tar.gz)** | [Casjoe-Agent-OS-1.0.5-Linux.tar.gz](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
+| **Linux (zip)** | [Casjoe-Agent-OS-1.0.5-Linux.zip](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
 
 *(Note: You must have [Ollama](https://ollama.com/) installed on your machine to power the offline AI features.)*
 
@@ -37,17 +37,32 @@ Casjoe Agent OS is an offline, enterprise‑grade business intelligence platform
    ollama run llama3.2
    ```
 
-### Installation
-1. Clone the repository (or extract the folder).
+### Development Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/okparacasperjoe/casjoe-agent-os.git
+   ```
 2. Install dependencies:
    ```bash
    npm install
    ```
-3. Run the development server:
+3. Run the desktop application in development mode:
    ```bash
-   npm run dev
+   npm start
    ```
-4. Open `http://localhost:5173` in your browser.
+
+### Building Executables
+To build the standalone `.exe` (Windows), `.dmg` (Mac), or `.zip` (Linux) files yourself:
+```bash
+# Build for Windows
+npm run electron:build
+
+# Build for Mac (requires macOS host)
+npm run electron:build:mac
+
+# Build for Linux
+npm run electron:build:linux
+```
 
 ## 💡 How It Works
 - **AI Chat Workspace:** Interact with the local AI, ask business questions, or upload PDFs directly for analysis.
