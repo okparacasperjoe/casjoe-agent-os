@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Sun, Moon, PanelLeftClose, PanelLeftOpen, PhoneCall } from 'lucide-react';
 import casjoeLogo from '../assets/casjoelogo.png';
 
 export default function Navbar({ 
@@ -8,7 +8,8 @@ export default function Navbar({
   isDarkMode, 
   toggleTheme,
   isSidebarCollapsed,
-  toggleSidebar
+  toggleSidebar,
+  onOpenLiveCall
 }) {
   return (
     <header className="w-full bg-[#070B15] border-b border-white/10 px-4 lg:px-6 py-2.5 flex items-center justify-between sticky top-0 z-50 select-none">
@@ -40,7 +41,21 @@ export default function Navbar({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2.5 md:gap-3 shrink-0">
+        
+        {/* Live Call Button (Muse AI Voice & Video Call) */}
+        {onOpenLiveCall && (
+          <button
+            onClick={onOpenLiveCall}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 transition-all text-xs font-bold shadow-md shadow-cyan-500/10 cursor-pointer active:scale-95"
+            title="Start Live Voice/Video Call with Muse AI"
+          >
+            <PhoneCall className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span className="tracking-wide">Live Call</span>
+          </button>
+        )}
+
+        {/* Offline / Online Status Pill */}
         <div className="offline-status-pill inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs">
           <span className={ollamaConnected ? "w-2 h-2 rounded-full bg-emerald-400 animate-pulse" : "w-2 h-2 rounded-full bg-amber-500"} />
           <span className="text-[11px] font-bold text-white tracking-wide">

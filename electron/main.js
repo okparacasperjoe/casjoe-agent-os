@@ -65,6 +65,14 @@ function createWindow() {
     session.defaultSession.setWebAuthnHandler(() => ({ action: 'cancel' }));
   }
 
+  // Auto-grant permissions for audio/mic, video/camera, and media for Live Call
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    callback(true);
+  });
+  if (session.defaultSession.setPermissionCheckHandler) {
+    session.defaultSession.setPermissionCheckHandler(() => true);
+  }
+
   [session.defaultSession, browserSession].forEach((sess) => {
     sess.webRequest.onBeforeSendHeaders((details, callback) => {
       details.requestHeaders['User-Agent'] = CHROME_DESKTOP_UA;

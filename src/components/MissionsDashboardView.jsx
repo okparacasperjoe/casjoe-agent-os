@@ -3,7 +3,7 @@ import {
   Bot, Compass, Globe, Sparkles, CheckCircle2, Clock, AlertTriangle, 
   Play, Pause, RefreshCw, Plus, Users, Shield, Lock, ExternalLink, 
   Terminal, ArrowRight, Eye, Check, X, Send, Database, FileText,
-  Building2, MessageSquare, Zap, Layers, Laptop, AlertCircle
+  Building2, MessageSquare, Zap, Layers, Laptop, AlertCircle, PhoneCall
 } from 'lucide-react';
 import { 
   useConnectedAccounts, 
@@ -17,7 +17,7 @@ import {
 import AccountLoginModal from './AccountLoginModal';
 import CookieImportModal from './CookieImportModal';
 
-export default function MissionsDashboardView({ onNavigateTab }) {
+export default function MissionsDashboardView({ onNavigateTab, onOpenLiveCall }) {
   const accounts = useConnectedAccounts() || [];
   const missions = useMissions() || [];
 
@@ -315,6 +315,17 @@ export default function MissionsDashboardView({ onNavigateTab }) {
             <Globe className="w-4 h-4 text-cyan-400" />
             <span>Import Browser Cookies</span>
           </button>
+
+          {onOpenLiveCall && (
+            <button
+              onClick={onOpenLiveCall}
+              className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30 border border-cyan-500/40 text-cyan-300 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+              title="Start Live Voice/Video Call with Muse AI"
+            >
+              <PhoneCall className="w-4 h-4 text-cyan-400 animate-pulse" />
+              <span>Call Muse AI</span>
+            </button>
+          )}
 
           {onNavigateTab && (
             <button

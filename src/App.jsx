@@ -29,6 +29,7 @@ const TaskView = lazy(() => import('./components/TaskView'));
 const HRView = lazy(() => import('./components/HRView'));
 const ERPView = lazy(() => import('./components/ERPView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
+const LiveCallModal = lazy(() => import('./components/LiveCallModal'));
 
 function TabLoader() {
   return (
@@ -61,6 +62,7 @@ export default function App() {
 
   // Modal State
   const [activeModal, setActiveModal] = useState(null);
+  const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
 
   // Theme State
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -184,6 +186,7 @@ export default function App() {
         toggleTheme={toggleTheme}
         isSidebarCollapsed={isSidebarCollapsed}
         toggleSidebar={toggleSidebar}
+        onOpenLiveCall={() => setIsLiveCallOpen(true)}
       />
 
       {/* Main Layout Container */}
@@ -194,6 +197,7 @@ export default function App() {
           setActiveTab={setActiveTab} 
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={toggleSidebar}
+          onOpenLiveCall={() => setIsLiveCallOpen(true)}
         />
 
         {/* Content Workspace Area with Lazy Loading & Error Isolation */}
@@ -201,11 +205,17 @@ export default function App() {
           <ErrorBoundary>
             <Suspense fallback={<TabLoader />}>
               {activeTab === 'agent-os' && (
-                <AgentOSView onNavigateTab={setActiveTab} />
+                <AgentOSView 
+                  onNavigateTab={setActiveTab} 
+                  onOpenLiveCall={() => setIsLiveCallOpen(true)} 
+                />
               )}
 
               {activeTab === 'missions' && (
-                <MissionsDashboardView onNavigateTab={setActiveTab} />
+                <MissionsDashboardView 
+                  onNavigateTab={setActiveTab} 
+                  onOpenLiveCall={() => setIsLiveCallOpen(true)} 
+                />
               )}
 
               {activeTab === 'agent-browser' && (
@@ -352,6 +362,17 @@ export default function App() {
         onCloseModal={() => setActiveModal(null)}
         customers={customers}
       />
+
+      {/* Live Voice & Video Call Modal with Animated Lip Synchronization */}
+      <Suspense fallback={null}>
+        {isLiveCallOpen && (
+          <LiveCallModal
+            isOpen={isLiveCallOpen}
+            onClose={() => setIsLiveCallOpen(false)}
+            onNavigateTab={setActiveTab}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }
