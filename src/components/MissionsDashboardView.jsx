@@ -31,6 +31,66 @@ export default function MissionsDashboardView({ onNavigateTab }) {
   const [connectingAccount, setConnectingAccount] = useState(null);
   const [showCookieModal, setShowCookieModal] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState(null);
+  const [isScanning, setIsScanning] = useState(false);
+
+  const getIpcRenderer = () => {
+    if (window.electron && window.electron.ipcRenderer) return window.electron.ipcRenderer;
+    if (typeof window !== 'undefined' && typeof window.require === 'function') {
+      try {
+        const electron = window.require('electron');
+        return electron.ipcRenderer || electron;
+      } catch {}
+    }
+    return null;
+  };
+
+  const scanAccountSessions = async (showNotification = false) => {
+    const ipc = getIpcRenderer();
+    if (!ipc || !ipc.invoke) return;
+
+    setIsScanning(true);
+    try {
+      const res = await ipc.invoke('agent:scan-account-sessions');
+      if (res && res.success && res.sessions) {
+        let newlyConnected = 0;
+        let totalActive = 0;
+        const now = new Date().toISOString();
+
+        for (const [platform, data] of Object.entries(res.sessions)) {
+          const acc = accounts.find(a => a.platform === platform);
+          if (acc) {
+            if (data.connected) {
+              totalActive++;
+              if (acc.status !== 'connected') {
+                newlyConnected++;
+              }
+              await updateConnectedAccount(acc.id, {
+                status: 'connected',
+                cookiesCount: data.cookieCount,
+                lastSynced: now
+              });
+            }
+          }
+        }
+
+        if (newlyConnected > 0 || showNotification) {
+          setSyncFeedback(`Auto-detected ${totalActive} active session(s) in local partition!`);
+          setTimeout(() => setSyncFeedback(null), 4000);
+        }
+      }
+    } catch (err) {
+      console.warn('Session scan error:', err);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  // Run automated scan when accounts mount
+  useEffect(() => {
+    if (accounts.length > 0) {
+      scanAccountSessions(false);
+    }
+  }, [accounts.length]);
 
   // Set default selected mission to the first active/pending or newest
   useEffect(() => {
@@ -207,8 +267,10 @@ export default function MissionsDashboardView({ onNavigateTab }) {
         onClose={() => setShowCookieModal(false)}
         onCookiesImported={(count) => {
           setShowCookieModal(false);
-          setSyncFeedback(`Imported ${count} active cookies from your system browser.`);
-          setTimeout(() => setSyncFeedback(null), 3500);
+          setSyncFeedback(`Imported ${count} active cookies from your system browser. Scanning sessions...`);
+          setTimeout(() => {
+            scanAccountSessions(true);
+          }, 600);
         }}
       />
 
@@ -236,8 +298,18 @@ export default function MissionsDashboardView({ onNavigateTab }) {
         {/* Global Action Bar */}
         <div className="flex items-center gap-2.5">
           <button
+            onClick={() => scanAccountSessions(true)}
+            disabled={isScanning}
+            className="flex items-center gap-2 px-3.5 py-2 bg-[#070B15] hover:bg-[#111A30] border border-slate-700/80 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+            title="Scan local partition for active authenticated sessions"
+          >
+            <RefreshCw className={`w-4 h-4 text-cyan-400 ${isScanning ? 'animate-spin' : ''}`} />
+            <span>{isScanning ? 'Scanning...' : 'Scan Sessions'}</span>
+          </button>
+
+          <button
             onClick={() => setShowCookieModal(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-[#070B15] hover:bg-[#111A30] border border-slate-700/80 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 bg-[#070B15] hover:bg-[#111A30] border border-slate-700/80 text-slate-200 hover:text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
             title="Import open browser cookies into the secure local partition"
           >
             <Globe className="w-4 h-4 text-cyan-400" />

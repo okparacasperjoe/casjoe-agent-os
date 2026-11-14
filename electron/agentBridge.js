@@ -326,6 +326,72 @@ export function setupAgentBridge(mainWindow) {
     }
   });
 
+  // 7.6. Auto-scan Persistent Partition for Active Social & Enterprise Sessions
+  ipcMain.handle('agent:scan-account-sessions', async () => {
+    try {
+      const { session } = await import('electron');
+      const targetSession = session.fromPartition('persist:casjoe_agent_browser');
+      if (!targetSession || !targetSession.cookies) {
+        return { success: false, sessions: {} };
+      }
+
+      const allCookies = await targetSession.cookies.get({});
+
+      const platformChecks = {
+        linkedin: {
+          domains: ['linkedin.com'],
+          authCookies: ['li_at', 'JSESSIONID', 'liap']
+        },
+        facebook: {
+          domains: ['facebook.com', 'fb.com'],
+          authCookies: ['c_user', 'xs']
+        },
+        instagram: {
+          domains: ['instagram.com'],
+          authCookies: ['sessionid', 'ds_user_id']
+        },
+        twitter: {
+          domains: ['x.com', 'twitter.com'],
+          authCookies: ['auth_token', 'ct0']
+        },
+        google: {
+          domains: ['google.com'],
+          authCookies: ['SID', 'SSID', 'SAPISID', 'HSID']
+        },
+        whatsapp: {
+          domains: ['whatsapp.com'],
+          authCookies: ['wa_browser_id', 'WABrowserId']
+        }
+      };
+
+      const results = {};
+
+      for (const [platform, config] of Object.entries(platformChecks)) {
+        const matchingCookies = allCookies.filter(c => 
+          config.domains.some(d => c.domain && c.domain.includes(d))
+        );
+
+        const hasAuthCookie = matchingCookies.some(c => 
+          config.authCookies.includes(c.name)
+        );
+
+        // Account is connected if it has specific auth token or at least 5 session cookies for that domain
+        const isConnected = hasAuthCookie || matchingCookies.length >= 6;
+
+        results[platform] = {
+          connected: isConnected,
+          cookieCount: matchingCookies.length,
+          hasAuthCookie
+        };
+      }
+
+      return { success: true, sessions: results };
+    } catch (err) {
+      console.error('Failed to scan account sessions:', err);
+      return { success: false, error: err.message, sessions: {} };
+    }
+  });
+
   // 8. Open File in System Notepad / Default Editor
   ipcMain.handle('agent:open-file', async (event, { filePath }) => {
     try {
