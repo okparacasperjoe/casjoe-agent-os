@@ -11,6 +11,7 @@ import { syncAll } from './services/erpSync';
 // Lazy-loaded workspace components for code-splitting and faster startup
 const AgentOSView = lazy(() => import('./components/AgentOSView'));
 const AgentBrowserView = lazy(() => import('./components/AgentBrowserView'));
+const MissionsDashboardView = lazy(() => import('./components/MissionsDashboardView'));
 const CasjoeBizView = lazy(() => import('./components/CasjoeBizView'));
 const DashboardView = lazy(() => import('./components/DashboardView'));
 const PerformanceView = lazy(() => import('./components/PerformanceView'));
@@ -201,6 +202,10 @@ export default function App() {
             <Suspense fallback={<TabLoader />}>
               {activeTab === 'agent-os' && (
                 <AgentOSView onNavigateTab={setActiveTab} />
+              )}
+
+              {activeTab === 'missions' && (
+                <MissionsDashboardView onNavigateTab={setActiveTab} />
               )}
 
               {activeTab === 'agent-browser' && (

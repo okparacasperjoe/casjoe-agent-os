@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Wallet, Sparkles, FileText, Cpu, Settings, 
   Package, ShoppingCart, BookOpen, Bot, Globe, Compass, ChevronDown, ChevronRight,
   Layers, Building2, Receipt, Truck, FolderKanban, CheckSquare,
-  PanelLeftClose, PanelLeftOpen
+  PanelLeftClose, PanelLeftOpen, Zap
 } from 'lucide-react';
 import casjoeLogo from '../assets/casjoelogo.png';
 
@@ -25,6 +25,7 @@ export default function Sidebar({ activeTab, setActiveTab, isCollapsed = false, 
 
   const topNavItems = [
     { id: 'agent-os', label: 'Agent OS', icon: Bot, badge: 'CEO' },
+    { id: 'missions', label: 'Live Missions', icon: Zap, badge: 'MUSE' },
     { id: 'agent-browser', label: 'Agent Browser', icon: Compass, badge: 'MANUS' },
     { id: 'casjoe-biz', label: 'Casjoe Biz', icon: Globe },
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },

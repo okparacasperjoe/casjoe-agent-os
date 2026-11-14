@@ -62,8 +62,13 @@ export default function AgentOSView({ onNavigateTab }) {
     if (!goalToRun.trim() || isRunning) return;
 
     const lower = goalToRun.toLowerCase();
-    // If the goal is a web browsing task, switch to Agent Browser live view
-    if (onNavigateTab && (lower.includes('browser') || lower.includes('facebook') || lower.includes('whatsapp') || lower.includes('linkedin') || lower.includes('cpanel') || lower.includes('http') || lower.includes('.com') || lower.includes('.org') || lower.includes('.net'))) {
+    // If the goal is a social/account task, switch to Live Missions
+    if (onNavigateTab && (lower.includes('facebook') || lower.includes('whatsapp') || lower.includes('linkedin') || lower.includes('social') || lower.includes('instagram') || lower.includes('mission') || lower.includes('lead'))) {
+      onNavigateTab('missions');
+      return;
+    }
+    // If the goal is a direct web browsing task, switch to Agent Browser live view
+    if (onNavigateTab && (lower.includes('browser') || lower.includes('cpanel') || lower.includes('http') || lower.includes('.com') || lower.includes('.org') || lower.includes('.net'))) {
       onNavigateTab('agent-browser');
       return;
     }
@@ -142,6 +147,17 @@ export default function AgentOSView({ onNavigateTab }) {
               <option value={PROVIDER_TYPES.GEMINI}>Cloud Model: Google Gemini 1.5</option>
             </select>
           </div>
+
+          {onNavigateTab && (
+            <button
+              onClick={() => onNavigateTab('missions')}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:brightness-110 text-white rounded-xl text-xs font-bold transition shadow-md shadow-cyan-500/20 cursor-pointer"
+              title="Open Live Autonomous Missions & Connected Accounts"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Live Missions</span>
+            </button>
+          )}
 
           <button
             onClick={() => setShowSettings(!showSettings)}

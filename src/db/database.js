@@ -34,6 +34,11 @@ db.version(5).stores({
   payroll: '++id, employeeId, employeeName, month, basicSalary, allowances, deductions, netSalary, status, paymentDate, createdAt'
 });
 
+db.version(6).stores({
+  connectedAccounts: '++id, platform, name, username, email, profileUrl, avatar, status, cookiesCount, lastSynced, createdAt, updatedAt',
+  missions: '++id, title, platform, objective, status, progress, currentStep, steps, approvalRequired, currentAction, logs, results, createdAt, updatedAt'
+});
+
 /**
  * Seeds the database with initial mock data if the tables are empty.
  */
@@ -147,6 +152,175 @@ export const initializeDatabase = async () => {
         { name: 'Amina Bello', role: 'Regional Operations Lead', department: 'Operations', email: 'amina.bello@casjoe.com', phone: '+234 802 123 4567', salary: 750000, currency: 'NGN', status: 'Active', joinDate: '2025-03-01', createdAt: now },
         { name: 'Kwame Mensah', role: 'Supply Chain Specialist', department: 'Procurement', email: 'kwame.m@casjoe.com', phone: '+233 24 555 0192', salary: 600000, currency: 'NGN', status: 'Active', joinDate: '2025-06-15', createdAt: now },
         { name: 'Zainab Idris', role: 'Financial Accountant', department: 'Finance', email: 'zainab.i@casjoe.com', phone: '+234 808 333 4455', salary: 700000, currency: 'NGN', status: 'Active', joinDate: '2025-04-10', createdAt: now }
+      ]);
+    }
+
+    // Check and seed connected social & business accounts
+    const accountCount = await db.connectedAccounts.count();
+    if (accountCount === 0) {
+      await db.connectedAccounts.bulkAdd([
+        {
+          platform: 'linkedin',
+          name: 'LinkedIn',
+          category: 'B2B Lead Sourcing & Outreach',
+          username: '',
+          email: '',
+          loginUrl: 'https://www.linkedin.com/login',
+          homeUrl: 'https://www.linkedin.com/feed',
+          status: 'ready_to_connect',
+          cookiesCount: 0,
+          lastSynced: null,
+          description: 'Prospect executive leads, connect with decision-makers, and draft B2B messages.',
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          platform: 'facebook',
+          name: 'Facebook & Meta Pages',
+          category: 'Customer Inquiries & Marketplace',
+          username: '',
+          email: '',
+          loginUrl: 'https://www.facebook.com/login',
+          homeUrl: 'https://www.facebook.com',
+          status: 'ready_to_connect',
+          cookiesCount: 0,
+          lastSynced: null,
+          description: 'Scan Page notifications, marketplace inquiries, and automate lead replies.',
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          platform: 'instagram',
+          name: 'Instagram Business',
+          category: 'Direct Messages & Brand Comments',
+          username: '',
+          email: '',
+          loginUrl: 'https://www.instagram.com/accounts/login',
+          homeUrl: 'https://www.instagram.com',
+          status: 'ready_to_connect',
+          cookiesCount: 0,
+          lastSynced: null,
+          description: 'Audit DMs, customer inquiries, and brand engagements.',
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          platform: 'twitter',
+          name: 'X (Twitter)',
+          category: 'Brand Mentions & Trend Monitoring',
+          username: '',
+          email: '',
+          loginUrl: 'https://x.com/i/flow/login',
+          homeUrl: 'https://x.com/home',
+          status: 'ready_to_connect',
+          cookiesCount: 0,
+          lastSynced: null,
+          description: 'Track industry keywords, solar tech trends, and customer mentions.',
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          platform: 'google',
+          name: 'Google & Gmail Workspace',
+          category: 'Email Outreach & Calendar',
+          username: '',
+          email: '',
+          loginUrl: 'https://accounts.google.com',
+          homeUrl: 'https://mail.google.com',
+          status: 'ready_to_connect',
+          cookiesCount: 0,
+          lastSynced: null,
+          description: 'Draft client outreach emails, sync schedule, and manage leads.',
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          platform: 'whatsapp',
+          name: 'WhatsApp Web & Business',
+          category: 'Client Support & Direct Chat',
+          username: '',
+          email: '',
+          loginUrl: 'https://web.whatsapp.com',
+          homeUrl: 'https://web.whatsapp.com',
+          status: 'ready_to_connect',
+          cookiesCount: 0,
+          lastSynced: null,
+          description: 'Handle customer orders, send status updates, and support chats.',
+          createdAt: now,
+          updatedAt: now
+        }
+      ]);
+    }
+
+    // Check and seed initial agent missions
+    const missionCount = await db.missions.count();
+    if (missionCount === 0) {
+      await db.missions.bulkAdd([
+        {
+          title: 'Harvest Top 10 Solar Energy Directors in Lagos',
+          platform: 'linkedin',
+          objective: 'Search LinkedIn for solar energy companies in Lagos, extract verified directors, and draft tailored connection requests.',
+          status: 'completed',
+          progress: 100,
+          currentStep: 'Mission Completed & Synced',
+          approvalRequired: false,
+          steps: [
+            { name: 'Verify LinkedIn Session', status: 'done' },
+            { name: 'Search "Solar Energy Lagos"', status: 'done' },
+            { name: 'Extract 10 Decision Makers', status: 'done' },
+            { name: 'Sentinel Approval for Outreach', status: 'done' },
+            { name: 'Sync 10 Leads to CRM', status: 'done' }
+          ],
+          results: [
+            { name: 'Engr. Babatunde Raji', company: 'Solafric Tech Ltd', role: 'Managing Director', location: 'Ikeja, Lagos', phone: '+234 802 444 8899', email: 'b.raji@solafric.ng' },
+            { name: 'Chisom Obi', company: 'SunVolt Energy Nigeria', role: 'Head of Procurement', location: 'Victoria Island, Lagos', phone: '+234 812 333 4455', email: 'c.obi@sunvolt.com.ng' },
+            { name: 'Tariq Al-Mansoor', company: 'Apex Inverter Systems', role: 'Chief Executive Officer', location: 'Lekki Phase 1, Lagos', phone: '+234 803 999 1122', email: 'tariq@apexinverters.com' }
+          ],
+          logs: [
+            '[09:12:05] LinkedIn session verified in secure partition.',
+            '[09:12:30] Executed targeted search: "Solar Energy Lagos Managing Director".',
+            '[09:13:10] Identified 14 matching company directors; filtered top 3 verified.',
+            '[09:14:00] Human approval received for connection notes.',
+            '[09:14:25] Successfully exported leads to Casjoe CRM database.'
+          ],
+          createdAt: now,
+          updatedAt: now
+        },
+        {
+          title: 'Monitor Facebook Page Customer Inquiries & Comments',
+          platform: 'facebook',
+          objective: 'Scan Meta Page notifications and Messenger inbox for product availability and pricing inquiries.',
+          status: 'awaiting_approval',
+          progress: 65,
+          currentStep: 'Sentinel Action Approval Required',
+          approvalRequired: true,
+          currentAction: {
+            type: 'REPLY_INQUIRY',
+            target: 'Musa Garba (Kano)',
+            platform: 'facebook',
+            message: 'Hello Musa, yes our 5kVA Solar Inverter and Lithium Battery packages are available in our Kano warehouse with same-day delivery.',
+            details: 'Customer asked: "Do you have inverters in Kano right now?"'
+          },
+          steps: [
+            { name: 'Authenticate Facebook Session', status: 'done' },
+            { name: 'Scan Page Inbox & Notifications', status: 'done' },
+            { name: 'Extract 3 Pending Inquiries', status: 'done' },
+            { name: 'Draft Tailored AI Responses', status: 'done' },
+            { name: 'Sentinel Action Approval Gate', status: 'waiting' },
+            { name: 'Send Verified Replies', status: 'pending' }
+          ],
+          results: [
+            { name: 'Musa Garba', location: 'Kano, Nigeria', question: 'Do you have inverters in Kano right now?', priority: 'High' }
+          ],
+          logs: [
+            '[10:04:12] Checking Meta Business Page connection... Active.',
+            '[10:05:00] Retrieved 1 unread message from Musa Garba.',
+            '[10:05:15] Matched inquiry against Casjoe Inventory (SKU-001 in stock).',
+            '[10:05:30] Drafted response. Paused at Sentinel Security Gate for operator sign-off.'
+          ],
+          createdAt: now,
+          updatedAt: now
+        }
       ]);
     }
   } catch (error) {

@@ -126,9 +126,73 @@ export const useSetting = (key) => {
   );
 };
 
+export const useConnectedAccounts = () => {
+  return useLiveQuery(
+    () => db.connectedAccounts.toArray(),
+    []
+  );
+};
+
+export const useMissions = () => {
+  return useLiveQuery(
+    () => db.missions.orderBy('createdAt').reverse().toArray(),
+    []
+  );
+};
+
 // ==========================================
 // Mutations (Non-hooks)
 // ==========================================
+
+export const updateConnectedAccount = async (id, data) => {
+  return db.connectedAccounts.update(id, {
+    ...data,
+    updatedAt: new Date().toISOString()
+  });
+};
+
+export const addMission = async (data) => {
+  const now = new Date().toISOString();
+  return db.missions.add({
+    ...data,
+    status: data.status || 'active',
+    progress: data.progress || 0,
+    currentStep: data.currentStep || 'Initializing Mission',
+    steps: data.steps || [],
+    results: data.results || [],
+    logs: data.logs || [`[${new Date().toLocaleTimeString()}] Mission initiated.`],
+    createdAt: now,
+    updatedAt: now
+  });
+};
+
+export const updateMission = async (id, data) => {
+  return db.missions.update(id, {
+    ...data,
+    updatedAt: new Date().toISOString()
+  });
+};
+
+export const deleteMission = async (id) => {
+  return db.missions.delete(id);
+};
+
+export const syncMissionLeadsToCRM = async (leads) => {
+  if (!leads || !Array.isArray(leads) || leads.length === 0) return 0;
+  const now = new Date().toISOString();
+  const customersToAdd = leads.map(l => ({
+    name: l.name || 'Discovered Lead',
+    company: l.company || l.role || 'Enterprise Contact',
+    location: l.location || 'Nigeria',
+    phone: l.phone || '+234 800 000 0000',
+    totalSpent: '₦0',
+    status: 'Lead',
+    notes: `Harvested via Casjoe Live Mission (${l.platform || 'Web/Social'}) - Role: ${l.role || 'Executive'}`,
+    createdAt: now
+  }));
+  await db.customers.bulkAdd(customersToAdd);
+  return customersToAdd.length;
+};
 
 export const addCustomer = async (data) => {
   return db.customers.add({
