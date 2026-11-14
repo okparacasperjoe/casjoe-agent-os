@@ -1,8 +1,67 @@
 /**
- * Casjoe Agent OS - Lip Sync & Audio Viseme Engine
- * Real-time speech audio analysis and phoneme-to-viseme mapping for animated AI avatars.
- * Supports Web Audio FFT frequency analysis, TTS boundary hooks, and smooth spring physics.
+ * Casjoe Agent OS - Enhanced Lip Sync & Natural Voice Tone Engine
+ * Real-time speech audio analysis, photorealistic human viseme kinematics,
+ * natural voice tone presets, neural voice auto-selection, and speech text smoothing.
  */
+
+// Voice Tone Presets for Human Avatars
+export const VOICE_TONES = {
+  ELENA: {
+    id: 'elena',
+    name: 'Elena (Warm & Conversational)',
+    gender: 'female',
+    pitch: 1.02,
+    rate: 0.98,
+    avatarId: 'elena',
+    keywords: ['Jenny', 'Aria', 'Michelle', 'Google US English', 'Samantha', 'Zira', 'Natural', 'Female'],
+    sampleText: "Hello Casper! I'm Elena, your warm and natural AI companion. How can I help you today?",
+    description: 'Empathetic, clear, and natural human conversational cadence'
+  },
+  MARCUS: {
+    id: 'marcus',
+    name: 'Marcus (Executive & Confident)',
+    gender: 'male',
+    pitch: 0.88,
+    rate: 0.95,
+    avatarId: 'marcus',
+    keywords: ['Guy', 'Christopher', 'Eric', 'David', 'Google US English Male', 'Mark', 'Natural', 'Male'],
+    sampleText: "Good day Casper. Marcus here. Ready to review your missions, leads, and business operations.",
+    description: 'Deep, resonant, authoritative corporate executive tone'
+  },
+  SOPHIA: {
+    id: 'sophia',
+    name: 'Sophia (Bright & Friendly)',
+    gender: 'female',
+    pitch: 1.08,
+    rate: 1.02,
+    avatarId: 'sophia',
+    keywords: ['Aria', 'Jenny', 'Google UK English Female', 'Victoria', 'Samantha'],
+    sampleText: "Hi there! I'm Sophia. Excited to automate your workflows and find high-quality leads!",
+    description: 'Energetic, modern, engaging conversational advisor'
+  },
+  DAVID: {
+    id: 'david',
+    name: 'David (Calm & Articulate)',
+    gender: 'male',
+    pitch: 0.94,
+    rate: 0.97,
+    avatarId: 'david',
+    keywords: ['Steffan', 'Guy', 'Roger', 'David', 'Google US English'],
+    sampleText: "Hello. David speaking. Standing by with accurate analysis and smooth task orchestration.",
+    description: 'Balanced, articulate, and thoughtful executive advisor'
+  },
+  VICTORIA: {
+    id: 'victoria',
+    name: 'Victoria (British RP Refined)',
+    gender: 'female',
+    pitch: 1.00,
+    rate: 0.97,
+    avatarId: 'elena',
+    keywords: ['Sonia', 'Libby', 'Maisie', 'Google UK English Female', 'Hazel', 'Susan', 'UK English'],
+    sampleText: "Greetings Casper. Victoria here, ready to assist with your executive affairs with utmost precision.",
+    description: 'Refined British accent with articulate pacing'
+  }
+};
 
 // Standard Viseme targets
 export const VISEMES = {
@@ -34,6 +93,50 @@ export function charToViseme(char) {
   return VISEMES.I_IH;
 }
 
+/**
+ * Pre-processes LLM text into natural, smooth human conversational speech:
+ * - Strips markdown symbols, code, brackets, and raw URLs
+ * - Expands currency ($100 -> "100 dollars") and percentages
+ * - Expands tech/business shorthand (e.g. -> "for example")
+ * - Adds natural breathing pauses at punctuation marks
+ */
+export function cleanTextForNaturalSpeech(text) {
+  if (!text) return '';
+  let s = String(text);
+
+  // 1. Strip Markdown links [text](url) -> text
+  s = s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  // 2. Strip code blocks and inline code
+  s = s.replace(/```[\s\S]*?```/g, '');
+  s = s.replace(/`([^`]+)`/g, '$1');
+  // 3. Strip headers, bullets, markdown asterisks, bold/italics
+  s = s.replace(/^[#*>-]+\s+/gm, '');
+  s = s.replace(/[*_~#]/g, '');
+  // 4. Strip raw URLs
+  s = s.replace(/https?:\/\/\S+/gi, 'the link');
+  // 5. Replace currencies with natural spoken words
+  s = s.replace(/\$(\d+(?:,\d+)*(?:\.\d+)?)/g, '$1 dollars');
+  s = s.replace(/€(\d+(?:,\d+)*(?:\.\d+)?)/g, '$1 euros');
+  s = s.replace(/£(\d+(?:,\d+)*(?:\.\d+)?)/g, '$1 pounds');
+  s = s.replace(/\b(\d+)%/g, '$1 percent');
+  // 6. Replace symbols
+  s = s.replace(/&/g, ' and ');
+  s = s.replace(/\+/g, ' plus ');
+  s = s.replace(/@/g, ' at ');
+  // 7. Expand common conversational abbreviations
+  s = s.replace(/\be\.g\.,?\b/gi, 'for example, ');
+  s = s.replace(/\bi\.e\.,?\b/gi, 'that is, ');
+  s = s.replace(/\bvs\.?\b/gi, 'versus');
+  s = s.replace(/\betc\.?\b/gi, 'and so on');
+  s = s.replace(/\bapprox\.?\b/gi, 'approximately');
+  s = s.replace(/\bw\/\b/gi, 'with');
+  // 8. Natural cadence pacing: add micro-spaces around sentence stops
+  s = s.replace(/([.!?])\s+/g, '$1  ');
+  s = s.replace(/([,;:])\s+/g, '$1 ');
+
+  return s.trim();
+}
+
 export class LipSyncEngine {
   constructor() {
     this.audioContext = null;
@@ -47,6 +150,12 @@ export class LipSyncEngine {
     this.isListening = false;
     this.speechUtterance = null;
     
+    // Voice preferences
+    this.selectedToneId = localStorage.getItem('casjoe_voice_tone') || 'elena';
+    this.customPitch = parseFloat(localStorage.getItem('casjoe_voice_pitch') || '1.0');
+    this.customRate = parseFloat(localStorage.getItem('casjoe_voice_rate') || '1.0');
+    this.selectedVoiceName = localStorage.getItem('casjoe_voice_name') || '';
+
     // Current interpolated state
     this.current = {
       open: 0.02,
@@ -142,7 +251,7 @@ export class LipSyncEngine {
     }
 
     // 2. Smoothly interpolate mouth physics towards target
-    const ease = this.isSpeaking ? 0.28 : 0.15; // Snappy speech response, smooth rest settle
+    const ease = this.isSpeaking ? 0.32 : 0.16; // Organic speech articulation
 
     this.current.open += (this.target.open - this.current.open) * ease;
     this.current.width += (this.target.width - this.current.width) * ease;
@@ -179,13 +288,10 @@ export class LipSyncEngine {
 
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(220, ctx.currentTime);
-
-      // Low volume carrier tone purely to feed the FFT analyser and visualizer
       gain.gain.setValueAtTime(0.015, ctx.currentTime);
 
       osc.connect(gain);
       gain.connect(this.analyser);
-      // We don't connect gain to ctx.destination to avoid hearing the synth tone over TTS
       osc.start();
 
       this.carrierOsc = osc;
@@ -210,9 +316,95 @@ export class LipSyncEngine {
   }
 
   /**
+   * Retrieves all available speech synthesis voices, prioritized by Natural/Neural quality
+   */
+  getAvailableVoices() {
+    if (!window.speechSynthesis) return [];
+    const voices = window.speechSynthesis.getVoices() || [];
+    
+    // Categorize and sort: Natural/Online/Neural first, then Google, then Apple/SAPI
+    return [...voices].sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const aScore = (aName.includes('natural') || aName.includes('neural') || aName.includes('online')) ? 3 :
+                     (aName.includes('google')) ? 2 : 1;
+      const bScore = (bName.includes('natural') || bName.includes('neural') || bName.includes('online')) ? 3 :
+                     (bName.includes('google')) ? 2 : 1;
+      return bScore - aScore;
+    });
+  }
+
+  /**
+   * Intelligently selects the best sounding voice for a given Voice Tone preset
+   */
+  findBestVoiceForTone(toneId, overrideVoiceName = null) {
+    const voices = this.getAvailableVoices();
+    if (voices.length === 0) return null;
+
+    // 1. Explicit user override
+    if (overrideVoiceName) {
+      const matched = voices.find(v => v.name.toLowerCase() === overrideVoiceName.toLowerCase());
+      if (matched) return matched;
+    }
+
+    const preset = VOICE_TONES[toneId?.toUpperCase()] || VOICE_TONES.ELENA;
+    const keywords = preset.keywords || [];
+
+    // 2. Look for Natural/Neural voices matching keywords first
+    for (const kw of keywords) {
+      const kwLower = kw.toLowerCase();
+      const naturalMatch = voices.find(v => {
+        const n = v.name.toLowerCase();
+        return n.includes(kwLower) && (n.includes('natural') || n.includes('neural') || n.includes('online'));
+      });
+      if (naturalMatch) return naturalMatch;
+    }
+
+    // 3. Look for standard voices matching keywords
+    for (const kw of keywords) {
+      const kwLower = kw.toLowerCase();
+      const match = voices.find(v => v.name.toLowerCase().includes(kwLower));
+      if (match) return match;
+    }
+
+    // 4. Look for any English Natural voice
+    const englishNatural = voices.find(v => {
+      const n = v.name.toLowerCase();
+      return (v.lang.startsWith('en') && (n.includes('natural') || n.includes('neural') || n.includes('online')));
+    });
+    if (englishNatural) return englishNatural;
+
+    // 5. Fallback to any English voice
+    return voices.find(v => v.lang.startsWith('en')) || voices[0];
+  }
+
+  /**
+   * Set and persist active voice tone
+   */
+  setVoiceTone(toneId) {
+    this.selectedToneId = toneId;
+    localStorage.setItem('casjoe_voice_tone', toneId);
+  }
+
+  setCustomPitch(pitch) {
+    this.customPitch = pitch;
+    localStorage.setItem('casjoe_voice_pitch', String(pitch));
+  }
+
+  setCustomRate(rate) {
+    this.customRate = rate;
+    localStorage.setItem('casjoe_voice_rate', String(rate));
+  }
+
+  setSelectedVoiceName(voiceName) {
+    this.selectedVoiceName = voiceName;
+    localStorage.setItem('casjoe_voice_name', voiceName);
+  }
+
+  /**
    * Speaks the provided text using SpeechSynthesis with synchronized lip visemes
    * @param {string} text - Spoken dialogue
-   * @param {object} options - { rate, pitch, voiceName, onStart, onEnd }
+   * @param {object} options - { toneId, rate, pitch, voiceName, onStart, onEnd }
    * @returns {Promise<void>}
    */
   async speak(text, options = {}) {
@@ -223,9 +415,9 @@ export class LipSyncEngine {
         return;
       }
 
-      this.stop(); // Stop any ongoing speech
+      this.stop(); // Stop ongoing speech
 
-      const cleanText = text.replace(/[*#_`]/g, '').trim();
+      const cleanText = cleanTextForNaturalSpeech(text);
       if (!cleanText) {
         resolve();
         return;
@@ -237,32 +429,29 @@ export class LipSyncEngine {
       const utterance = new SpeechSynthesisUtterance(cleanText);
       this.speechUtterance = utterance;
 
-      utterance.rate = options.rate || 1.05;
-      utterance.pitch = options.pitch || 1.0;
+      const toneId = options.toneId || this.selectedToneId || 'elena';
+      const preset = VOICE_TONES[toneId?.toUpperCase()] || VOICE_TONES.ELENA;
 
-      // Select best voice (prefer natural English)
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        const preferred = voices.find(v => 
-          (options.voiceName && v.name.toLowerCase().includes(options.voiceName.toLowerCase())) ||
-          v.name.includes('Natural') ||
-          v.name.includes('Google US English') ||
-          v.name.includes('Samantha') ||
-          v.name.includes('David') ||
-          v.lang.startsWith('en')
-        );
-        if (preferred) utterance.voice = preferred;
+      // Rate and Pitch calculation (balanced for organic human cadence)
+      utterance.rate = options.rate || (preset.rate * this.customRate) || 0.98;
+      utterance.pitch = options.pitch || (preset.pitch * this.customPitch) || 1.0;
+
+      // Select voice
+      const chosenVoice = this.findBestVoiceForTone(
+        toneId, 
+        options.voiceName || this.selectedVoiceName
+      );
+      if (chosenVoice) {
+        utterance.voice = chosenVoice;
       }
 
-      // Word-by-word syllable timing simulation
+      // Syllable boundary detection
       const words = cleanText.split(/\s+/);
       let wordIndex = 0;
-      let charIndex = 0;
 
-      // Real boundary event from speech synthesis
       utterance.onboundary = (e) => {
         if (e.name === 'word' || e.charIndex !== undefined) {
-          charIndex = e.charIndex || 0;
+          const charIndex = e.charIndex || 0;
           const word = words[wordIndex] || cleanText.substr(charIndex, 8);
           wordIndex++;
           this.triggerWordVisemes(word);
@@ -272,7 +461,6 @@ export class LipSyncEngine {
       utterance.onstart = () => {
         this.isSpeaking = true;
         if (options.onStart) options.onStart();
-        // Start rhythmic phoneme generator to cover continuous speech
         this.startPhonemeSequence(cleanText);
       };
 
@@ -299,7 +487,6 @@ export class LipSyncEngine {
     const clean = word.toLowerCase().replace(/[^a-z]/g, '');
     if (!clean) return;
 
-    // Pick primary vowel or consonant in word
     let chosenViseme = VISEMES.A_AH;
     for (const c of clean) {
       if ('o'.includes(c)) { chosenViseme = VISEMES.O_OH; break; }
@@ -310,7 +497,6 @@ export class LipSyncEngine {
       if ('fv'.includes(c)) { chosenViseme = VISEMES.F_V; break; }
     }
 
-    // Set target with randomized amplitude for organic life
     const amp = 0.55 + Math.random() * 0.45;
     this.target = {
       ...chosenViseme,
@@ -322,7 +508,6 @@ export class LipSyncEngine {
   startPhonemeSequence(text) {
     if (this.syllableTimer) clearInterval(this.syllableTimer);
 
-    // Phoneme cadence ~ 130-160ms per syllable
     const visemeSequence = [
       VISEMES.A_AH,
       VISEMES.E_EE,
@@ -342,9 +527,9 @@ export class LipSyncEngine {
         return;
       }
 
-      // 10% chance of consonant closure / breath pause
+      // Organic consonant breath pauses
       if (Math.random() < 0.12) {
-        this.target = { ...VISEMES.M_B_P, open: 0.05, audioLevel: 0.2 };
+        this.target = { ...VISEMES.M_B_P, open: 0.04, audioLevel: 0.2 };
         return;
       }
 
@@ -358,7 +543,7 @@ export class LipSyncEngine {
         width: base.width * (0.95 + Math.random() * 0.1),
         audioLevel: variance
       };
-    }, 135);
+    }, 130);
   }
 
   stop() {

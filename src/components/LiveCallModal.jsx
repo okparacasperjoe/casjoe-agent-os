@@ -2,26 +2,60 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   PhoneOff, Mic, MicOff, Video, VideoOff, Volume2, VolumeX, 
   MessageSquare, Send, Sparkles, Captions, Maximize2, Minimize2, 
-  RefreshCw, CheckCircle2, ChevronDown, User, ShieldCheck, Zap
+  RefreshCw, CheckCircle2, ChevronDown, User, ShieldCheck, Zap,
+  Sliders, Upload, Music, Volume1, Play
 } from 'lucide-react';
+import AnimatedHumanAvatar, { HUMAN_AVATAR_PRESETS } from './AnimatedHumanAvatar';
 import AnimatedAvatar, { AVATAR_STYLES } from './AnimatedAvatar';
-import { lipSyncEngine } from '../services/lipSyncEngine';
+import { 
+  lipSyncEngine, 
+  VOICE_TONES, 
+  cleanTextForNaturalSpeech 
+} from '../services/lipSyncEngine';
 import { executeModelRequest, getSelectedModelConfig } from '../services/modelManager';
+
+export const CALL_AVATAR_TYPES = {
+  ELENA: 'elena',
+  MARCUS: 'marcus',
+  SOPHIA: 'sophia',
+  MUSE_CYBER: 'muse',
+  CUSTOM: 'custom'
+};
 
 export default function LiveCallModal({
   isOpen,
   onClose,
-  initialAvatar = AVATAR_STYLES.MUSE,
+  initialAvatar = CALL_AVATAR_TYPES.ELENA,
   onNavigateTab
 }) {
   // Call session states
   const [callDuration, setCallDuration] = useState(0);
-  const [avatarStyle, setAvatarStyle] = useState(initialAvatar);
+  const [avatarType, setAvatarType] = useState(initialAvatar);
+  const [customAvatarImg, setCustomAvatarImg] = useState(null);
+
+  // Voice Tone states
+  const [selectedVoiceTone, setSelectedVoiceTone] = useState(() => {
+    return localStorage.getItem('casjoe_voice_tone') || 'elena';
+  });
+  const [voicePitch, setVoicePitch] = useState(() => {
+    return parseFloat(localStorage.getItem('casjoe_voice_pitch') || '1.0');
+  });
+  const [voiceRate, setVoiceRate] = useState(() => {
+    return parseFloat(localStorage.getItem('casjoe_voice_rate') || '0.98');
+  });
+  const [selectedVoiceName, setSelectedVoiceName] = useState(() => {
+    return localStorage.getItem('casjoe_voice_name') || '';
+  });
+  const [availableSystemVoices, setAvailableSystemVoices] = useState([]);
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
+
+  // Call hardware & control states
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(false);
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   const [showCaptions, setShowCaptions] = useState(true);
   const [showChatDrawer, setShowChatDrawer] = useState(false);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
 
@@ -32,12 +66,27 @@ export default function LiveCallModal({
   const [textInput, setTextInput] = useState('');
   const [chatHistory, setChatHistory] = useState([]);
 
-  // DOM and hardware refs
+  // Hardware & DOM refs
   const videoRef = useRef(null);
   const recognitionRef = useRef(null);
   const timerIntervalRef = useRef(null);
   const isSpeakingRef = useRef(false);
   const containerRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Load OS speech synthesis voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const v = lipSyncEngine.getAvailableVoices();
+      if (v.length > 0) {
+        setAvailableSystemVoices(v);
+      }
+    };
+    loadVoices();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
 
   // -----------------------------------------------------------------
   // 1. CALL LIFECYCLE & TIMER
@@ -58,12 +107,13 @@ export default function LiveCallModal({
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
-    // Initial greeting from Muse AI
+    // Initial greeting from AI Presenter
     const initTimer = setTimeout(() => {
       setCallStatus('speaking');
-      const greeting = "Hello Casper Joe! I'm your Muse AI. I'm live and ready to help you find leads, automate missions, or run your business. What are we working on today?";
+      const avatarName = avatarType === 'marcus' ? 'Marcus' : avatarType === 'sophia' ? 'Sophia' : 'Elena';
+      const greeting = `Hello Casper Joe! I'm ${avatarName}, your AI partner. I'm live on the line with video animated lip synchronization. How can I assist you with your business, missions, or leads today?`;
       handleAiSpeak(greeting);
-    }, 900);
+    }, 800);
 
     return () => {
       clearTimeout(initTimer);
@@ -223,11 +273,11 @@ export default function LiveCallModal({
     setCurrentTranscript(userText);
 
     try {
-      // Prompt optimized for voice calling (short, natural, direct dialogue)
-      const systemPrompt = `You are Muse AI, an expressive, highly intelligent conversational agent inside Casjoe Agent OS.
-Keep your response concise (1-3 sentences max) because this is a live spoken voice call.
-Be enthusiastic, helpful, and professional. You can trigger tasks or give advice on business, leads, CRM, and automation.
-User's query: "${userText}"`;
+      const avatarName = avatarType === 'marcus' ? 'Marcus' : avatarType === 'sophia' ? 'Sophia' : 'Elena';
+      const systemPrompt = `You are ${avatarName}, an intelligent, polished, and natural AI advisor inside Casjoe Agent OS.
+Keep your answer clear, conversational, and natural (1 to 3 sentences max) because this is a live spoken video call.
+Avoid markdown asterisks or bullet points. Speak directly as a human presenter would.
+User asked: "${userText}"`;
 
       let aiResponseText = '';
 
@@ -250,15 +300,15 @@ User's query: "${userText}"`;
       if (!aiResponseText) {
         const lower = userText.toLowerCase();
         if (lower.includes('lead') || lower.includes('linkedin') || lower.includes('mission')) {
-          aiResponseText = "I've inspected your Live Missions. You can launch a LinkedIn lead scraper right away or audit connected Facebook profiles. Shall I open the missions board?";
+          aiResponseText = "I've checked your Live Missions. You can launch a LinkedIn lead scraper right away or audit connected Facebook profiles. Shall I open the missions board?";
         } else if (lower.includes('invoice') || lower.includes('sale') || lower.includes('money')) {
           aiResponseText = "Your Business Suite is fully synced. You have 3 pending invoices totaling $4,250 ready for follow up. Would you like me to draft reminders?";
         } else if (lower.includes('browser') || lower.includes('web') || lower.includes('site')) {
           aiResponseText = "The Agent Browser is standing by with cookie injection and session preservation ready to navigate any web destination.";
-        } else if (lower.includes('who are you') || lower.includes('muse') || lower.includes('casjoe')) {
-          aiResponseText = "I am Muse AI, your voice companion inside Casjoe Agent OS. I feature real-time video animated lip synchronization so we can talk just like a live call!";
+        } else if (lower.includes('who are you') || lower.includes('name') || lower.includes('casjoe')) {
+          aiResponseText = `I am ${avatarName}, your AI companion in Casjoe Agent OS. I feature real-time video animated lip synchronization so our conversations feel natural and lifelike!`;
         } else {
-          aiResponseText = `I heard you clearly: "${userText}". I'm coordinating with your background agents to execute that right now. Anything else you need?`;
+          aiResponseText = `I heard you clearly: "${userText}". I am coordinating with your background agents to handle this right now. What else would you like to review?`;
         }
       }
 
@@ -276,13 +326,15 @@ User's query: "${userText}"`;
     setChatHistory((prev) => [...prev, { role: 'assistant', text: speechText }]);
 
     if (isSpeakerMuted) {
-      // Just simulate delay if muted
       await new Promise((r) => setTimeout(r, 2000));
     } else {
-      // Speak using lip-sync engine (drives facial visemes in real-time)
-      await lipSyncEngine.speak(speechText, {
-        rate: 1.05,
-        pitch: 1.0
+      // Natural speech cleaning (eliminates robotic symbols and pauses)
+      const smoothed = cleanTextForNaturalSpeech(speechText);
+      await lipSyncEngine.speak(smoothed, {
+        toneId: selectedVoiceTone,
+        pitch: voicePitch,
+        rate: voiceRate,
+        voiceName: selectedVoiceName
       });
     }
 
@@ -292,6 +344,48 @@ User's query: "${userText}"`;
     // Automatically resume listening to user
     if (!isMicMuted && isOpen) {
       startSpeechRecognition();
+    }
+  };
+
+  // Preview / Test Voice Tone
+  const handleTestVoiceTone = async (toneId) => {
+    if (isTestingVoice) return;
+    setIsTestingVoice(true);
+    const preset = VOICE_TONES[toneId?.toUpperCase()] || VOICE_TONES.ELENA;
+    await lipSyncEngine.speak(preset.sampleText, {
+      toneId,
+      pitch: voicePitch,
+      rate: voiceRate,
+      voiceName: selectedVoiceName
+    });
+    setIsTestingVoice(false);
+  };
+
+  // Handle Custom Avatar Image Upload
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCustomAvatarImg(event.target.result);
+      setAvatarType(CALL_AVATAR_TYPES.CUSTOM);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Select Avatar & automatically match Voice Tone
+  const handleSelectAvatar = (type) => {
+    setAvatarType(type);
+    if (type === CALL_AVATAR_TYPES.MARCUS) {
+      setSelectedVoiceTone('marcus');
+      lipSyncEngine.setVoiceTone('marcus');
+    } else if (type === CALL_AVATAR_TYPES.SOPHIA) {
+      setSelectedVoiceTone('sophia');
+      lipSyncEngine.setVoiceTone('sophia');
+    } else if (type === CALL_AVATAR_TYPES.ELENA) {
+      setSelectedVoiceTone('elena');
+      lipSyncEngine.setVoiceTone('elena');
     }
   };
 
@@ -340,7 +434,7 @@ User's query: "${userText}"`;
 
           <h2 className="text-2xl font-bold text-white font-['Outfit']">Call Completed</h2>
           <p className="text-sm text-slate-400 mt-1">
-            Session with Muse AI ended • <span className="text-cyan-400 font-mono font-bold">{formatTime(callDuration)}</span>
+            Session ended • <span className="text-cyan-400 font-mono font-bold">{formatTime(callDuration)}</span>
           </p>
 
           <div className="my-6 bg-slate-900/60 border border-slate-800 rounded-2xl p-4 text-left max-h-48 overflow-y-auto space-y-2">
@@ -353,7 +447,7 @@ User's query: "${userText}"`;
               chatHistory.map((item, idx) => (
                 <div key={idx} className="text-xs">
                   <span className={item.role === 'user' ? 'text-amber-400 font-semibold' : 'text-cyan-400 font-semibold'}>
-                    {item.role === 'user' ? 'You: ' : 'Muse: '}
+                    {item.role === 'user' ? 'You: ' : 'AI: '}
                   </span>
                   <span className="text-slate-300">{item.text}</span>
                 </div>
@@ -383,7 +477,7 @@ User's query: "${userText}"`;
               onClick={onClose}
               className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition cursor-pointer"
             >
-              Close & Return
+              Close &amp; Return
             </button>
           </div>
         </div>
@@ -391,11 +485,23 @@ User's query: "${userText}"`;
     );
   }
 
+  const isHumanAvatar = avatarType !== CALL_AVATAR_TYPES.MUSE_CYBER;
+  const currentAvatarName = avatarType === 'marcus' ? 'Marcus' : avatarType === 'sophia' ? 'Sophia' : avatarType === 'custom' ? 'Custom Avatar' : avatarType === 'muse' ? 'Muse Cyber' : 'Elena';
+
   return (
     <div 
       ref={containerRef}
       className="fixed inset-0 z-50 flex flex-col bg-[#050914] text-white select-none overflow-hidden"
     >
+      {/* Hidden file input for custom human photo upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+
       {/* ------------------------------------------------------------- */}
       {/* 1. TOP CALL HEADER BAR                                        */}
       {/* ------------------------------------------------------------- */}
@@ -403,18 +509,18 @@ User's query: "${userText}"`;
         
         {/* Left: Caller info & Status */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-md shadow-cyan-500/10">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-md shadow-cyan-500/10">
             <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm md:text-base font-black font-['Outfit'] tracking-wide">
-                Casjoe Muse AI
+                {currentAvatarName} • Live Call
               </h2>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                LIVE CALL
+                HD VIDEO &amp; LIP-SYNC
               </span>
             </div>
             <span className="text-xs font-mono text-cyan-400/90 font-medium">
@@ -423,34 +529,60 @@ User's query: "${userText}"`;
           </div>
         </div>
 
-        {/* Center: Quick Avatar Style Selector */}
-        <div className="hidden sm:flex items-center gap-1.5 bg-[#0C1529] p-1 rounded-2xl border border-white/10">
+        {/* Center: Avatar Selection Bar (Elena, Marcus, Sophia, Custom, Cyber) */}
+        <div className="hidden sm:flex items-center gap-1.5 bg-[#0C1529] p-1.5 rounded-2xl border border-white/10">
           {[
-            { id: AVATAR_STYLES.MUSE, label: 'Muse Cyber', color: 'text-cyan-400' },
-            { id: AVATAR_STYLES.AURA, label: 'Aura 3D', color: 'text-pink-400' },
-            { id: AVATAR_STYLES.CASJOE, label: 'Casjoe Core', color: 'text-amber-400' },
-            { id: AVATAR_STYLES.HOLO, label: 'Hologram', color: 'text-emerald-400' },
+            { id: CALL_AVATAR_TYPES.ELENA, label: 'Elena', tag: 'Human' },
+            { id: CALL_AVATAR_TYPES.MARCUS, label: 'Marcus', tag: 'Human' },
+            { id: CALL_AVATAR_TYPES.SOPHIA, label: 'Sophia', tag: 'Human' },
+            { id: CALL_AVATAR_TYPES.MUSE_CYBER, label: 'Muse Cyber', tag: 'Vector' }
           ].map((item) => (
             <button
               key={item.id}
-              onClick={() => setAvatarStyle(item.id)}
-              className={`px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
-                avatarStyle === item.id
-                  ? 'bg-white/10 text-white shadow-sm border border-white/15'
+              onClick={() => handleSelectAvatar(item.id)}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                avatarType === item.id
+                  ? 'bg-white/15 text-white shadow-sm border border-white/20'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span className={item.color}>●</span> {item.label}
+              <span>{item.label}</span>
+              <span className="text-[9px] px-1 py-0.2 rounded bg-cyan-950/80 text-cyan-300 font-mono">
+                {item.tag}
+              </span>
             </button>
           ))}
+
+          {/* Upload Custom Photo Button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+              avatarType === CALL_AVATAR_TYPES.CUSTOM
+                ? 'bg-white/15 text-white shadow-sm border border-white/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+            title="Upload any human photo from your computer"
+          >
+            <Upload className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Upload Photo</span>
+          </button>
         </div>
 
         {/* Right: Technical Badges & Window controls */}
         <div className="flex items-center gap-2">
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] text-slate-300">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>End-to-End Local</span>
-          </div>
+          {/* Voice Tone Selector Trigger */}
+          <button
+            onClick={() => setShowVoiceSettings((prev) => !prev)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition cursor-pointer ${
+              showVoiceSettings
+                ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-300'
+                : 'bg-white/5 border-white/10 text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
+            title="Select Voice Tone & Fine-tune Audio"
+          >
+            <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden md:inline">Voice &amp; Tone</span>
+          </button>
 
           <button
             onClick={toggleFullscreen}
@@ -467,27 +599,29 @@ User's query: "${userText}"`;
       {/* ------------------------------------------------------------- */}
       <div className="relative flex-1 flex flex-col items-center justify-center p-4 overflow-hidden">
         
-        {/* Subtle Background Glow Animation */}
+        {/* Soft Radial Ambient Lighting */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B1428] via-[#050914] to-[#04070F] pointer-events-none" />
 
-        {/* Background Grid Accent Lines */}
-        <div 
-          className="absolute inset-0 opacity-15 pointer-events-none"
-          style={{
-            backgroundImage: `radial-gradient(circle at 50% 50%, rgba(6,182,212,0.15) 0%, transparent 65%), linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
-            backgroundSize: '100% 100%, 48px 48px, 48px 48px'
-          }}
-        />
-
-        {/* Central Animated Video Avatar */}
+        {/* Central Avatar Stage */}
         <div className="relative z-10 my-auto">
-          <AnimatedAvatar
-            avatarStyle={avatarStyle}
-            isSpeaking={callStatus === 'speaking'}
-            isListening={callStatus === 'listening'}
-            isThinking={callStatus === 'thinking'}
-            showAudioRings={true}
-          />
+          {isHumanAvatar ? (
+            <AnimatedHumanAvatar
+              avatarId={avatarType}
+              customImage={avatarType === CALL_AVATAR_TYPES.CUSTOM ? customAvatarImg : null}
+              isSpeaking={callStatus === 'speaking'}
+              isListening={callStatus === 'listening'}
+              isThinking={callStatus === 'thinking'}
+              showRings={true}
+            />
+          ) : (
+            <AnimatedAvatar
+              avatarStyle={AVATAR_STYLES.MUSE}
+              isSpeaking={callStatus === 'speaking'}
+              isListening={callStatus === 'listening'}
+              isThinking={callStatus === 'thinking'}
+              showAudioRings={true}
+            />
+          )}
         </div>
 
         {/* ----------------------------------------------------------- */}
@@ -513,7 +647,6 @@ User's query: "${userText}"`;
               </div>
             )}
 
-            {/* User tag */}
             <div className="absolute bottom-1.5 left-2 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-[9px] font-bold text-white flex items-center gap-1">
               <span className={`w-1.5 h-1.5 rounded-full ${isMicMuted ? 'bg-red-500' : 'bg-emerald-400 animate-pulse'}`} />
               <span>You</span>
@@ -529,7 +662,7 @@ User's query: "${userText}"`;
             {callStatus === 'speaking' && lastAiMessage && (
               <div className="bg-black/75 backdrop-blur-lg border border-cyan-500/30 rounded-2xl p-3.5 shadow-2xl text-center animate-in fade-in slide-in-from-bottom-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400 block mb-1">
-                  Muse AI Speaking
+                  {currentAvatarName} Speaking
                 </span>
                 <p className="text-sm md:text-base text-white font-medium leading-relaxed">
                   "{lastAiMessage}"
@@ -552,7 +685,7 @@ User's query: "${userText}"`;
               <div className="bg-black/75 backdrop-blur-lg border border-amber-500/30 rounded-2xl p-3 shadow-2xl text-center">
                 <span className="text-xs font-semibold text-amber-300 flex items-center justify-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  Processing voice input & formulating response...
+                  Formulating intelligent response...
                 </span>
               </div>
             )}
@@ -566,7 +699,7 @@ User's query: "${userText}"`;
           {[
             "Find LinkedIn leads",
             "What can you automate?",
-            "Draft a client invoice",
+            "Review pending invoices",
             "Audit my connected accounts"
           ].map((prompt, i) => (
             <button
@@ -583,14 +716,168 @@ User's query: "${userText}"`;
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 6. IN-CALL TEXT CHAT DRAWER (COLLAPSIBLE)                     */}
+      {/* 6. VOICE TONE & AUDIO SETTINGS DRAWER                         */}
+      {/* ------------------------------------------------------------- */}
+      {showVoiceSettings && (
+        <div className="absolute top-16 right-0 bottom-24 w-84 md:w-96 bg-[#080E1C]/95 backdrop-blur-xl border-l border-white/15 z-40 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 p-5 overflow-y-auto space-y-5">
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <h3 className="text-sm font-bold flex items-center gap-2 text-white">
+              <Sliders className="w-4 h-4 text-cyan-400" />
+              <span>Voice Tone &amp; Audio Selection</span>
+            </h3>
+            <button
+              onClick={() => setShowVoiceSettings(false)}
+              className="text-slate-400 hover:text-white text-xs font-bold"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Voice Tone Presets */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+              Natural Voice Tone Presets
+            </label>
+
+            <div className="grid grid-cols-1 gap-2">
+              {Object.values(VOICE_TONES).map((tone) => (
+                <div
+                  key={tone.id}
+                  onClick={() => {
+                    setSelectedVoiceTone(tone.id);
+                    lipSyncEngine.setVoiceTone(tone.id);
+                  }}
+                  className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                    selectedVoiceTone === tone.id
+                      ? 'bg-cyan-500/15 border-cyan-500/60 text-white'
+                      : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div>
+                    <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span className={tone.gender === 'female' ? 'text-pink-400' : 'text-blue-400'}>
+                        {tone.gender === 'female' ? '♀' : '♂'}
+                      </span>
+                      <span>{tone.name}</span>
+                    </h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{tone.description}</p>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTestVoiceTone(tone.id);
+                    }}
+                    disabled={isTestingVoice}
+                    className="p-2 rounded-xl bg-white/10 hover:bg-cyan-500 hover:text-slate-950 text-cyan-400 transition cursor-pointer"
+                    title="Play voice tone sample"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pitch & Speed Fine-Tuning */}
+          <div className="space-y-4 pt-2 border-t border-white/10">
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">Voice Pitch</span>
+                <span className="text-cyan-400 font-mono">{voicePitch.toFixed(2)}x</span>
+              </div>
+              <input
+                type="range"
+                min="0.7"
+                max="1.3"
+                step="0.02"
+                value={voicePitch}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setVoicePitch(val);
+                  lipSyncEngine.setCustomPitch(val);
+                }}
+                className="w-full accent-cyan-400 cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                <span>Deeper</span>
+                <span>Default</span>
+                <span>Higher</span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-xs font-semibold mb-1">
+                <span className="text-slate-300">Speech Rate / Speed</span>
+                <span className="text-cyan-400 font-mono">{voiceRate.toFixed(2)}x</span>
+              </div>
+              <input
+                type="range"
+                min="0.8"
+                max="1.25"
+                step="0.02"
+                value={voiceRate}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setVoiceRate(val);
+                  lipSyncEngine.setCustomRate(val);
+                }}
+                className="w-full accent-cyan-400 cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500 mt-0.5">
+                <span>Relaxed</span>
+                <span>Conversational</span>
+                <span>Fast</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Direct System Voice Selection */}
+          {availableSystemVoices.length > 0 && (
+            <div className="space-y-1.5 pt-2 border-t border-white/10">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                Installed System Voice Override
+              </label>
+              <select
+                value={selectedVoiceName}
+                onChange={(e) => {
+                  setSelectedVoiceName(e.target.value);
+                  lipSyncEngine.setSelectedVoiceName(e.target.value);
+                }}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
+              >
+                <option value="">Auto-select Best Natural Voice</option>
+                {availableSystemVoices.map((v, i) => (
+                  <option key={i} value={v.name}>
+                    {v.name} ({v.lang})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="pt-2 text-center">
+            <button
+              onClick={() => handleTestVoiceTone(selectedVoiceTone)}
+              disabled={isTestingVoice}
+              className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:brightness-110 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/20"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>{isTestingVoice ? 'Speaking Sample...' : 'Test Current Voice Tone'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* 7. IN-CALL TEXT CHAT DRAWER                                   */}
       {/* ------------------------------------------------------------- */}
       {showChatDrawer && (
         <div className="absolute top-16 right-0 bottom-24 w-80 md:w-96 bg-[#080E1C]/95 backdrop-blur-xl border-l border-white/10 z-30 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
           <div className="p-4 border-b border-white/10 flex items-center justify-between">
             <h3 className="text-sm font-bold flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-cyan-400" />
-              <span>In-Call Dialogue & Fallback</span>
+              <span>In-Call Dialogue &amp; Fallback</span>
             </h3>
             <button
               onClick={() => setShowChatDrawer(false)}
@@ -620,7 +907,7 @@ User's query: "${userText}"`;
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Type message to Muse..."
+              placeholder="Type message to presenter..."
               className="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
             />
             <button
@@ -635,7 +922,7 @@ User's query: "${userText}"`;
       )}
 
       {/* ------------------------------------------------------------- */}
-      {/* 7. BOTTOM IN-CALL CONTROL BAR                                 */}
+      {/* 8. BOTTOM IN-CALL CONTROL BAR                                 */}
       {/* ------------------------------------------------------------- */}
       <div className="px-6 py-4 bg-[#080E1C]/90 backdrop-blur-xl border-t border-white/10 flex items-center justify-between z-20">
         
@@ -713,8 +1000,20 @@ User's query: "${userText}"`;
 
         </div>
 
-        {/* Right Sub-controls: Text Drawer */}
+        {/* Right Sub-controls: Text Drawer & Voice Settings */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowVoiceSettings((prev) => !prev)}
+            className={`p-3 rounded-2xl border transition cursor-pointer ${
+              showVoiceSettings
+                ? 'bg-cyan-500/15 border-cyan-500/40 text-cyan-400'
+                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+            }`}
+            title="Voice Tone Settings"
+          >
+            <Sliders className="w-5 h-5" />
+          </button>
+
           <button
             onClick={() => setShowChatDrawer((prev) => !prev)}
             className={`p-3 rounded-2xl border transition cursor-pointer ${

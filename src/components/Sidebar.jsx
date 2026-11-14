@@ -182,7 +182,7 @@ export default function Sidebar({
           <div className="w-6 h-6 rounded-lg bg-[#090E1B] border border-[#FF9F00]/30 flex items-center justify-center p-1 opacity-90">
             <img src={casjoeLogo} alt="Casjoe Logo" className="w-full h-full object-contain drop-shadow-md" />
           </div>
-          <div className="text-[10px] font-mono text-slate-500">v1.0.9</div>
+          <div className="text-[10px] font-mono text-slate-500">v1.1.0</div>
         </div>
 
         <div className="flex items-center gap-2">
