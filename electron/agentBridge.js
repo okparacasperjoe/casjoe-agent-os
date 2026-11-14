@@ -403,4 +403,31 @@ export function setupAgentBridge(mainWindow) {
       return { success: false, error: err.message };
     }
   });
+
+  // 9. Edge Neural Voice Synthesis (Free, Ultra-Realistic Human Speech)
+  ipcMain.handle('agent:synthesize-neural-speech', async (event, { text, voice = 'en-US-JennyNeural', rate = '+0%', pitch = '+0Hz' }) => {
+    try {
+      const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
+      const tts = new MsEdgeTTS();
+      await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+      const { audioStream } = tts.toStream(text, { pitch, rate });
+      
+      const chunks = [];
+      return new Promise((resolve) => {
+        audioStream.on('data', (chunk) => chunks.push(chunk));
+        audioStream.on('end', () => {
+          const buffer = Buffer.concat(chunks);
+          const base64 = buffer.toString('base64');
+          resolve({ success: true, base64Audio: base64, mimeType: 'audio/mp3', size: buffer.length });
+        });
+        audioStream.on('error', (err) => {
+          console.error('[EdgeTTS] Stream error:', err);
+          resolve({ success: false, error: err.message });
+        });
+      });
+    } catch (err) {
+      console.error('[EdgeTTS] Synthesize error:', err);
+      return { success: false, error: err.message };
+    }
+  });
 }

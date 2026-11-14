@@ -1,97 +1,58 @@
 /**
- * Casjoe Agent OS - Enhanced Lip Sync & Natural Voice Tone Engine
- * Real-time speech audio analysis, photorealistic human viseme kinematics,
- * natural voice tone presets, neural voice auto-selection, and speech text smoothing.
+ * Casjoe Agent OS - 3D Neural Lip-Sync & Voice Engine
+ * Streams hyper-realistic Microsoft Edge Neural voices directly through Web Audio API,
+ * providing real-time acoustic frequency analysis and ARKit-standard blendshape targets:
+ * jawOpen, mouthPucker, mouthSmile, mouthPress, eyeBlink, and head kinematics.
  */
 
-// Voice Tone Presets for Human Avatars
+// Voice Tone Presets for 3D Human Avatars
 export const VOICE_TONES = {
   ELENA: {
     id: 'elena',
     name: 'Elena (Warm & Conversational)',
     gender: 'female',
-    pitch: 1.02,
-    rate: 0.98,
-    avatarId: 'elena',
-    keywords: ['Jenny', 'Aria', 'Michelle', 'Google US English', 'Samantha', 'Zira', 'Natural', 'Female'],
-    sampleText: "Hello Casper! I'm Elena, your warm and natural AI companion. How can I help you today?",
-    description: 'Empathetic, clear, and natural human conversational cadence'
+    edgeVoice: 'en-US-JennyNeural',
+    pitch: '+0Hz',
+    rate: '+0%',
+    description: 'Empathetic, clear, and natural human conversational tone'
   },
   MARCUS: {
     id: 'marcus',
     name: 'Marcus (Executive & Confident)',
     gender: 'male',
-    pitch: 0.88,
-    rate: 0.95,
-    avatarId: 'marcus',
-    keywords: ['Guy', 'Christopher', 'Eric', 'David', 'Google US English Male', 'Mark', 'Natural', 'Male'],
-    sampleText: "Good day Casper. Marcus here. Ready to review your missions, leads, and business operations.",
+    edgeVoice: 'en-US-GuyNeural',
+    pitch: '-3Hz',
+    rate: '-2%',
     description: 'Deep, resonant, authoritative corporate executive tone'
   },
   SOPHIA: {
     id: 'sophia',
     name: 'Sophia (Bright & Friendly)',
     gender: 'female',
-    pitch: 1.08,
-    rate: 1.02,
-    avatarId: 'sophia',
-    keywords: ['Aria', 'Jenny', 'Google UK English Female', 'Victoria', 'Samantha'],
-    sampleText: "Hi there! I'm Sophia. Excited to automate your workflows and find high-quality leads!",
-    description: 'Energetic, modern, engaging conversational advisor'
+    edgeVoice: 'en-US-AriaNeural',
+    pitch: '+2Hz',
+    rate: '+2%',
+    description: 'Energetic, modern, engaging tech advisor'
   },
   DAVID: {
     id: 'david',
     name: 'David (Calm & Articulate)',
     gender: 'male',
-    pitch: 0.94,
-    rate: 0.97,
-    avatarId: 'david',
-    keywords: ['Steffan', 'Guy', 'Roger', 'David', 'Google US English'],
-    sampleText: "Hello. David speaking. Standing by with accurate analysis and smooth task orchestration.",
+    edgeVoice: 'en-US-ChristopherNeural',
+    pitch: '-2Hz',
+    rate: '-3%',
     description: 'Balanced, articulate, and thoughtful executive advisor'
   },
   VICTORIA: {
     id: 'victoria',
     name: 'Victoria (British RP Refined)',
     gender: 'female',
-    pitch: 1.00,
-    rate: 0.97,
-    avatarId: 'elena',
-    keywords: ['Sonia', 'Libby', 'Maisie', 'Google UK English Female', 'Hazel', 'Susan', 'UK English'],
-    sampleText: "Greetings Casper. Victoria here, ready to assist with your executive affairs with utmost precision.",
-    description: 'Refined British accent with articulate pacing'
+    edgeVoice: 'en-GB-SoniaNeural',
+    pitch: '+0Hz',
+    rate: '+0%',
+    description: 'Refined, elegant British accent with articulate pacing'
   }
 };
-
-// Standard Viseme targets
-export const VISEMES = {
-  REST: { open: 0.02, width: 1.0, round: 0.05, teeth: false, tongue: false, name: 'REST' },
-  A_AH: { open: 0.85, width: 1.05, round: 0.35, teeth: true, tongue: false, name: 'A_AH' },
-  E_EE: { open: 0.35, width: 1.35, round: 0.05, teeth: true, tongue: false, name: 'E_EE' },
-  I_IH: { open: 0.45, width: 1.20, round: 0.10, teeth: true, tongue: false, name: 'I_IH' },
-  O_OH: { open: 0.70, width: 0.70, round: 0.85, teeth: false, tongue: false, name: 'O_OH' },
-  U_OO: { open: 0.35, width: 0.50, round: 1.00, teeth: false, tongue: false, name: 'U_OO' },
-  M_B_P: { open: 0.00, width: 0.95, round: 0.00, teeth: false, tongue: false, name: 'M_B_P' },
-  F_V: { open: 0.15, width: 1.10, round: 0.10, teeth: true, tongue: false, name: 'F_V' },
-  TH_L: { open: 0.30, width: 1.05, round: 0.10, teeth: true, tongue: true, name: 'TH_L' },
-  S_Z: { open: 0.15, width: 1.15, round: 0.05, teeth: true, tongue: false, name: 'S_Z' },
-  SMILE: { open: 0.10, width: 1.25, round: 0.00, teeth: true, tongue: false, name: 'SMILE' }
-};
-
-// Map letters / phonemes to viseme targets
-export function charToViseme(char) {
-  const c = char.toLowerCase();
-  if ('ae'.includes(c)) return VISEMES.A_AH;
-  if ('iy'.includes(c)) return VISEMES.E_EE;
-  if ('o'.includes(c)) return VISEMES.O_OH;
-  if ('uüw'.includes(c)) return VISEMES.U_OO;
-  if ('mbp'.includes(c)) return VISEMES.M_B_P;
-  if ('fv'.includes(c)) return VISEMES.F_V;
-  if ('tl'.includes(c)) return VISEMES.TH_L;
-  if ('szcx'.includes(c)) return VISEMES.S_Z;
-  if (' ,.!?'.includes(c)) return VISEMES.REST;
-  return VISEMES.I_IH;
-}
 
 /**
  * Pre-processes LLM text into natural, smooth human conversational speech:
@@ -141,42 +102,40 @@ export class LipSyncEngine {
   constructor() {
     this.audioContext = null;
     this.analyser = null;
+    this.dataArray = null;
+    this.activeAudioSource = null;
     this.micAnalyser = null;
     this.micStream = null;
-    this.dataArray = null;
     this.micDataArray = null;
-    
+
     this.isSpeaking = false;
     this.isListening = false;
-    this.speechUtterance = null;
-    
-    // Voice preferences
+
+    // Active voice configuration
     this.selectedToneId = localStorage.getItem('casjoe_voice_tone') || 'elena';
     this.customPitch = parseFloat(localStorage.getItem('casjoe_voice_pitch') || '1.0');
     this.customRate = parseFloat(localStorage.getItem('casjoe_voice_rate') || '1.0');
-    this.selectedVoiceName = localStorage.getItem('casjoe_voice_name') || '';
 
-    // Current interpolated state
-    this.current = {
-      open: 0.02,
-      width: 1.0,
-      round: 0.05,
-      teeth: false,
-      tongue: false,
-      audioLevel: 0,
-      micLevel: 0,
-      visemeName: 'REST'
+    // ARKit-Standard 3D Facial Blendshape Parameters (0.0 to 1.0)
+    this.blendshapes = {
+      jawOpen: 0.0,        // Primary vertical jaw opening
+      mouthPucker: 0.0,    // 'O' and 'U' circular lips
+      mouthFunnel: 0.0,    // 'OH' open oval
+      mouthSmile: 0.1,     // Natural subtle smile / 'EE' width
+      mouthStretch: 0.0,   // Horizontal vowel stretch
+      mouthPress: 0.0,     // 'M', 'B', 'P' closed lip seal
+      teethExposure: 0.0,  // Upper dental visibility
+      tongueUp: 0.0,       // 'L', 'TH' articulation
+      audioLevel: 0.0,     // Real-time audio RMS amplitude
+      micLevel: 0.0        // User mic volume
     };
-    
-    // Target state driven by speech / audio
-    this.target = { ...VISEMES.REST, audioLevel: 0 };
-    
+
+    // Target state driven by real-time acoustic FFT
+    this.targetBlendshapes = { ...this.blendshapes };
+
     this.listeners = new Set();
     this.animFrameId = null;
-    this.syllableTimer = null;
-    this.carrierOsc = null;
-    this.carrierGain = null;
-    
+
     this.startAnimationLoop();
   }
 
@@ -186,8 +145,8 @@ export class LipSyncEngine {
       if (AudioCtx) {
         this.audioContext = new AudioCtx();
         this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 128;
-        this.analyser.smoothingTimeConstant = 0.5;
+        this.analyser.fftSize = 256;
+        this.analyser.smoothingTimeConstant = 0.45;
         this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       }
     }
@@ -197,7 +156,7 @@ export class LipSyncEngine {
     return this.audioContext;
   }
 
-  // Connect microphone for live user audio meter
+  // Connect microphone for user audio visualizer
   async startMicMonitoring() {
     try {
       const ctx = this.getAudioContext();
@@ -226,7 +185,7 @@ export class LipSyncEngine {
     this.isListening = false;
   }
 
-  // Interpolation loop running at 60fps
+  // 60fps interpolation physics loop
   startAnimationLoop() {
     const loop = () => {
       this.updatePhysics();
@@ -237,36 +196,86 @@ export class LipSyncEngine {
   }
 
   updatePhysics() {
-    // 1. Read Mic Level if monitoring
+    // 1. Analyze user mic if listening
     if (this.micAnalyser && this.micDataArray) {
       this.micAnalyser.getByteFrequencyData(this.micDataArray);
       let sum = 0;
       for (let i = 0; i < this.micDataArray.length; i++) {
         sum += this.micDataArray[i];
       }
-      const avg = sum / this.micDataArray.length;
-      this.current.micLevel = avg / 128; // 0.0 to 1.0+
+      this.blendshapes.micLevel = (sum / this.micDataArray.length) / 128;
     } else {
-      this.current.micLevel = 0;
+      this.blendshapes.micLevel = 0;
     }
 
-    // 2. Smoothly interpolate mouth physics towards target
-    const ease = this.isSpeaking ? 0.32 : 0.16; // Organic speech articulation
+    // 2. Real-time Acoustic Analysis of playing neural speech
+    if (this.isSpeaking && this.analyser && this.dataArray) {
+      this.analyser.getByteFrequencyData(this.dataArray);
 
-    this.current.open += (this.target.open - this.current.open) * ease;
-    this.current.width += (this.target.width - this.current.width) * ease;
-    this.current.round += (this.target.round - this.current.round) * ease;
-    this.current.audioLevel += (this.target.audioLevel - this.current.audioLevel) * 0.25;
+      let totalEnergy = 0;
+      let lowBand = 0;   // 100Hz - 600Hz (vowel fundamentals, 'O', 'U')
+      let midBand = 0;   // 600Hz - 2200Hz ('A', 'E', jaw opening formants)
+      let highBand = 0;  // 2500Hz - 6000Hz ('S', 'F', fricative sibilants)
 
-    this.current.teeth = this.target.teeth;
-    this.current.tongue = this.target.tongue;
-    this.current.visemeName = this.target.name || 'REST';
-    this.current.isSpeaking = this.isSpeaking;
+      const binCount = this.dataArray.length; // 128
+      for (let i = 0; i < binCount; i++) {
+        const val = this.dataArray[i];
+        totalEnergy += val;
+        if (i < 8) lowBand += val;
+        else if (i < 32) midBand += val;
+        else if (i < 70) highBand += val;
+      }
+
+      const avg = totalEnergy / binCount; // 0 to 255
+      const rms = avg / 128; // 0 to ~2.0
+
+      if (rms > 0.04) {
+        // Voice is actively producing sound
+        const jawOpenTarget = Math.min(1.0, Math.max(0.05, (midBand / 24) / 100 * 1.3));
+        const puckerTarget = Math.min(1.0, (lowBand / 8) / 120 * 0.9);
+        const stretchTarget = Math.min(1.0, (midBand / 24) / 140);
+        const teethTarget = Math.min(1.0, (highBand / 38) / 110);
+
+        this.targetBlendshapes.jawOpen = jawOpenTarget;
+        this.targetBlendshapes.mouthPucker = puckerTarget > 0.4 ? puckerTarget : 0.05;
+        this.targetBlendshapes.mouthStretch = stretchTarget;
+        this.targetBlendshapes.teethExposure = teethTarget;
+        this.targetBlendshapes.mouthPress = 0.0;
+        this.targetBlendshapes.audioLevel = rms;
+      } else {
+        // Brief pause or consonant breath closure
+        this.targetBlendshapes.jawOpen = 0.02;
+        this.targetBlendshapes.mouthPucker = 0.05;
+        this.targetBlendshapes.mouthStretch = 0.05;
+        this.targetBlendshapes.teethExposure = 0.0;
+        this.targetBlendshapes.mouthPress = 0.15;
+        this.targetBlendshapes.audioLevel = 0.0;
+      }
+    } else if (!this.isSpeaking) {
+      // Return smoothly to relaxed neutral smile
+      this.targetBlendshapes.jawOpen = 0.0;
+      this.targetBlendshapes.mouthPucker = 0.0;
+      this.targetBlendshapes.mouthFunnel = 0.0;
+      this.targetBlendshapes.mouthSmile = 0.1;
+      this.targetBlendshapes.mouthStretch = 0.0;
+      this.targetBlendshapes.mouthPress = 0.0;
+      this.targetBlendshapes.teethExposure = 0.0;
+      this.targetBlendshapes.audioLevel = 0.0;
+    }
+
+    // 3. Smooth Damped Spring Interpolation at 60fps
+    const ease = this.isSpeaking ? 0.35 : 0.18;
+    this.blendshapes.jawOpen += (this.targetBlendshapes.jawOpen - this.blendshapes.jawOpen) * ease;
+    this.blendshapes.mouthPucker += (this.targetBlendshapes.mouthPucker - this.blendshapes.mouthPucker) * ease;
+    this.blendshapes.mouthStretch += (this.targetBlendshapes.mouthStretch - this.blendshapes.mouthStretch) * ease;
+    this.blendshapes.mouthPress += (this.targetBlendshapes.mouthPress - this.blendshapes.mouthPress) * ease;
+    this.blendshapes.teethExposure += (this.targetBlendshapes.teethExposure - this.blendshapes.teethExposure) * ease;
+    this.blendshapes.audioLevel += (this.targetBlendshapes.audioLevel - this.blendshapes.audioLevel) * 0.3;
   }
 
   notifyListeners() {
     for (const cb of this.listeners) {
-      cb({ ...this.current });
+      cb({ ...this.blendshapes, isSpeaking: this.isSpeaking, isListening: this.isListening });
     }
   }
 
@@ -275,147 +284,20 @@ export class LipSyncEngine {
     return () => this.listeners.delete(callback);
   }
 
-  // Generate real-time synthetic carrier tone for visualizer FFT
-  startAudioCarrier() {
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx || !this.analyser) return;
-
-      this.stopAudioCarrier();
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(220, ctx.currentTime);
-      gain.gain.setValueAtTime(0.015, ctx.currentTime);
-
-      osc.connect(gain);
-      gain.connect(this.analyser);
-      osc.start();
-
-      this.carrierOsc = osc;
-      this.carrierGain = gain;
-    } catch {}
-  }
-
-  stopAudioCarrier() {
-    if (this.carrierOsc) {
-      try {
-        this.carrierOsc.stop();
-        this.carrierOsc.disconnect();
-      } catch {}
-      this.carrierOsc = null;
-    }
-    if (this.carrierGain) {
-      try {
-        this.carrierGain.disconnect();
-      } catch {}
-      this.carrierGain = null;
-    }
-  }
-
-  /**
-   * Retrieves all available speech synthesis voices, prioritized by Natural/Neural quality
-   */
-  getAvailableVoices() {
-    if (!window.speechSynthesis) return [];
-    const voices = window.speechSynthesis.getVoices() || [];
-    
-    // Categorize and sort: Natural/Online/Neural first, then Google, then Apple/SAPI
-    return [...voices].sort((a, b) => {
-      const aName = a.name.toLowerCase();
-      const bName = b.name.toLowerCase();
-      const aScore = (aName.includes('natural') || aName.includes('neural') || aName.includes('online')) ? 3 :
-                     (aName.includes('google')) ? 2 : 1;
-      const bScore = (bName.includes('natural') || bName.includes('neural') || bName.includes('online')) ? 3 :
-                     (bName.includes('google')) ? 2 : 1;
-      return bScore - aScore;
-    });
-  }
-
-  /**
-   * Intelligently selects the best sounding voice for a given Voice Tone preset
-   */
-  findBestVoiceForTone(toneId, overrideVoiceName = null) {
-    const voices = this.getAvailableVoices();
-    if (voices.length === 0) return null;
-
-    // 1. Explicit user override
-    if (overrideVoiceName) {
-      const matched = voices.find(v => v.name.toLowerCase() === overrideVoiceName.toLowerCase());
-      if (matched) return matched;
-    }
-
-    const preset = VOICE_TONES[toneId?.toUpperCase()] || VOICE_TONES.ELENA;
-    const keywords = preset.keywords || [];
-
-    // 2. Look for Natural/Neural voices matching keywords first
-    for (const kw of keywords) {
-      const kwLower = kw.toLowerCase();
-      const naturalMatch = voices.find(v => {
-        const n = v.name.toLowerCase();
-        return n.includes(kwLower) && (n.includes('natural') || n.includes('neural') || n.includes('online'));
-      });
-      if (naturalMatch) return naturalMatch;
-    }
-
-    // 3. Look for standard voices matching keywords
-    for (const kw of keywords) {
-      const kwLower = kw.toLowerCase();
-      const match = voices.find(v => v.name.toLowerCase().includes(kwLower));
-      if (match) return match;
-    }
-
-    // 4. Look for any English Natural voice
-    const englishNatural = voices.find(v => {
-      const n = v.name.toLowerCase();
-      return (v.lang.startsWith('en') && (n.includes('natural') || n.includes('neural') || n.includes('online')));
-    });
-    if (englishNatural) return englishNatural;
-
-    // 5. Fallback to any English voice
-    return voices.find(v => v.lang.startsWith('en')) || voices[0];
-  }
-
-  /**
-   * Set and persist active voice tone
-   */
   setVoiceTone(toneId) {
     this.selectedToneId = toneId;
     localStorage.setItem('casjoe_voice_tone', toneId);
   }
 
-  setCustomPitch(pitch) {
-    this.customPitch = pitch;
-    localStorage.setItem('casjoe_voice_pitch', String(pitch));
-  }
-
-  setCustomRate(rate) {
-    this.customRate = rate;
-    localStorage.setItem('casjoe_voice_rate', String(rate));
-  }
-
-  setSelectedVoiceName(voiceName) {
-    this.selectedVoiceName = voiceName;
-    localStorage.setItem('casjoe_voice_name', voiceName);
-  }
-
   /**
-   * Speaks the provided text using SpeechSynthesis with synchronized lip visemes
-   * @param {string} text - Spoken dialogue
-   * @param {object} options - { toneId, rate, pitch, voiceName, onStart, onEnd }
-   * @returns {Promise<void>}
+   * Speaks dialogue using high-fidelity Microsoft Edge Neural Voice streaming.
+   * Feeds the decoded audio directly into Web Audio for acoustic lip synchronization.
+   * @param {string} text - Spoken text
+   * @param {object} options - { toneId, pitch, rate, onStart, onEnd }
    */
   async speak(text, options = {}) {
-    return new Promise((resolve) => {
-      if (!window.speechSynthesis) {
-        console.warn('SpeechSynthesis not supported');
-        resolve();
-        return;
-      }
-
-      this.stop(); // Stop ongoing speech
+    return new Promise(async (resolve) => {
+      this.stop(); // Stop ongoing audio
 
       const cleanText = cleanTextForNaturalSpeech(text);
       if (!cleanText) {
@@ -423,140 +305,128 @@ export class LipSyncEngine {
         return;
       }
 
-      this.isSpeaking = true;
-      this.startAudioCarrier();
-
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      this.speechUtterance = utterance;
-
       const toneId = options.toneId || this.selectedToneId || 'elena';
       const preset = VOICE_TONES[toneId?.toUpperCase()] || VOICE_TONES.ELENA;
 
-      // Rate and Pitch calculation (balanced for organic human cadence)
-      utterance.rate = options.rate || (preset.rate * this.customRate) || 0.98;
-      utterance.pitch = options.pitch || (preset.pitch * this.customPitch) || 1.0;
+      // Rate / pitch adjustments
+      const pitchStr = options.pitch ? `${Math.round((options.pitch - 1) * 20)}Hz` : preset.pitch;
+      const rateStr = options.rate ? `${Math.round((options.rate - 1) * 30)}%` : preset.rate;
 
-      // Select voice
-      const chosenVoice = this.findBestVoiceForTone(
-        toneId, 
-        options.voiceName || this.selectedVoiceName
-      );
-      if (chosenVoice) {
-        utterance.voice = chosenVoice;
+      // Check if Electron native IPC is available for Edge Neural TTS
+      let ipcRenderer = null;
+      if (window.electron && window.electron.ipcRenderer) {
+        ipcRenderer = window.electron.ipcRenderer;
+      } else if (typeof window !== 'undefined' && typeof window.require === 'function') {
+        try {
+          const electron = window.require('electron');
+          ipcRenderer = electron.ipcRenderer;
+        } catch {}
       }
 
-      // Syllable boundary detection
-      const words = cleanText.split(/\s+/);
-      let wordIndex = 0;
+      if (ipcRenderer && ipcRenderer.invoke) {
+        try {
+          // 1. Invoke Edge Neural TTS in Electron Main process
+          const res = await ipcRenderer.invoke('agent:synthesize-neural-speech', {
+            text: cleanText,
+            voice: preset.edgeVoice,
+            pitch: pitchStr,
+            rate: rateStr
+          });
 
-      utterance.onboundary = (e) => {
-        if (e.name === 'word' || e.charIndex !== undefined) {
-          const charIndex = e.charIndex || 0;
-          const word = words[wordIndex] || cleanText.substr(charIndex, 8);
-          wordIndex++;
-          this.triggerWordVisemes(word);
+          if (res && res.success && res.base64Audio) {
+            // 2. Decode MP3 Audio into Web Audio Buffer
+            const ctx = this.getAudioContext();
+            const binaryString = window.atob(res.base64Audio);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+
+            // 3. Play audio through AnalyserNode
+            const source = ctx.createBufferSource();
+            source.buffer = audioBuffer;
+
+            source.connect(this.analyser);
+            this.analyser.connect(ctx.destination);
+
+            this.activeAudioSource = source;
+            this.isSpeaking = true;
+            if (options.onStart) options.onStart();
+
+            source.onended = () => {
+              this.isSpeaking = false;
+              this.activeAudioSource = null;
+              if (options.onEnd) options.onEnd();
+              resolve();
+            };
+
+            source.start(0);
+            return;
+          }
+        } catch (err) {
+          console.warn('Edge Neural TTS IPC failed, falling back to speech synthesis:', err);
         }
-      };
+      }
 
-      utterance.onstart = () => {
-        this.isSpeaking = true;
-        if (options.onStart) options.onStart();
-        this.startPhonemeSequence(cleanText);
-      };
-
-      const finish = () => {
-        this.isSpeaking = false;
-        this.target = { ...VISEMES.REST, audioLevel: 0 };
-        this.stopAudioCarrier();
-        if (this.syllableTimer) clearInterval(this.syllableTimer);
-        this.speechUtterance = null;
-        if (options.onEnd) options.onEnd();
-        resolve();
-      };
-
-      utterance.onend = finish;
-      utterance.onerror = finish;
-
-      window.speechSynthesis.speak(utterance);
+      // Offline / browser fallback: use natural Web Speech API
+      this.speakFallback(cleanText, preset, options, resolve);
     });
   }
 
-  // Trigger expressive syllable visemes throughout words
-  triggerWordVisemes(word) {
-    if (!word || !this.isSpeaking) return;
-    const clean = word.toLowerCase().replace(/[^a-z]/g, '');
-    if (!clean) return;
-
-    let chosenViseme = VISEMES.A_AH;
-    for (const c of clean) {
-      if ('o'.includes(c)) { chosenViseme = VISEMES.O_OH; break; }
-      if ('u'.includes(c)) { chosenViseme = VISEMES.U_OO; break; }
-      if ('eiy'.includes(c)) { chosenViseme = VISEMES.E_EE; break; }
-      if ('a'.includes(c)) { chosenViseme = VISEMES.A_AH; break; }
-      if ('mbp'.includes(c)) { chosenViseme = VISEMES.M_B_P; break; }
-      if ('fv'.includes(c)) { chosenViseme = VISEMES.F_V; break; }
+  speakFallback(cleanText, preset, options, resolve) {
+    if (!window.speechSynthesis) {
+      resolve();
+      return;
     }
 
-    const amp = 0.55 + Math.random() * 0.45;
-    this.target = {
-      ...chosenViseme,
-      open: chosenViseme.open * amp,
-      audioLevel: amp
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 0.98;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices();
+    const naturalVoice = voices.find(v => 
+      v.name.includes('Natural') || 
+      v.name.includes('Jenny') || 
+      v.name.includes('Guy') || 
+      v.name.includes('Google') || 
+      v.lang.startsWith('en')
+    );
+    if (naturalVoice) utterance.voice = naturalVoice;
+
+    this.isSpeaking = true;
+    if (options.onStart) options.onStart();
+
+    const finish = () => {
+      this.isSpeaking = false;
+      if (options.onEnd) options.onEnd();
+      resolve();
     };
-  }
 
-  startPhonemeSequence(text) {
-    if (this.syllableTimer) clearInterval(this.syllableTimer);
+    utterance.onend = finish;
+    utterance.onerror = finish;
 
-    const visemeSequence = [
-      VISEMES.A_AH,
-      VISEMES.E_EE,
-      VISEMES.O_OH,
-      VISEMES.S_Z,
-      VISEMES.I_IH,
-      VISEMES.M_B_P,
-      VISEMES.U_OO,
-      VISEMES.TH_L
-    ];
-
-    let idx = 0;
-    this.syllableTimer = setInterval(() => {
-      if (!this.isSpeaking) {
-        clearInterval(this.syllableTimer);
-        this.target = { ...VISEMES.REST, audioLevel: 0 };
-        return;
-      }
-
-      // Organic consonant breath pauses
-      if (Math.random() < 0.12) {
-        this.target = { ...VISEMES.M_B_P, open: 0.04, audioLevel: 0.2 };
-        return;
-      }
-
-      idx = (idx + 1) % visemeSequence.length;
-      const base = visemeSequence[idx];
-      const variance = 0.65 + Math.random() * 0.35;
-
-      this.target = {
-        ...base,
-        open: base.open * variance,
-        width: base.width * (0.95 + Math.random() * 0.1),
-        audioLevel: variance
-      };
-    }, 130);
+    window.speechSynthesis.speak(utterance);
   }
 
   stop() {
+    if (this.activeAudioSource) {
+      try {
+        this.activeAudioSource.stop();
+        this.activeAudioSource.disconnect();
+      } catch {}
+      this.activeAudioSource = null;
+    }
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
-    if (this.syllableTimer) {
-      clearInterval(this.syllableTimer);
-      this.syllableTimer = null;
-    }
-    this.stopAudioCarrier();
     this.isSpeaking = false;
-    this.target = { ...VISEMES.REST, audioLevel: 0 };
+    this.targetBlendshapes.jawOpen = 0.0;
+    this.targetBlendshapes.mouthPucker = 0.0;
+    this.targetBlendshapes.mouthStretch = 0.0;
+    this.targetBlendshapes.audioLevel = 0.0;
   }
 
   destroy() {
@@ -574,5 +444,4 @@ export class LipSyncEngine {
   }
 }
 
-// Export singleton instance
 export const lipSyncEngine = new LipSyncEngine();

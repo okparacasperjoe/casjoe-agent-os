@@ -3,10 +3,9 @@ import {
   PhoneOff, Mic, MicOff, Video, VideoOff, Volume2, VolumeX, 
   MessageSquare, Send, Sparkles, Captions, Maximize2, Minimize2, 
   RefreshCw, CheckCircle2, ChevronDown, User, ShieldCheck, Zap,
-  Sliders, Upload, Music, Volume1, Play
+  Sliders, Play, Radio
 } from 'lucide-react';
-import AnimatedHumanAvatar, { HUMAN_AVATAR_PRESETS } from './AnimatedHumanAvatar';
-import AnimatedAvatar, { AVATAR_STYLES } from './AnimatedAvatar';
+import ThreeHumanAvatar, { THREE_AVATAR_PERSONAS } from './ThreeHumanAvatar';
 import { 
   lipSyncEngine, 
   VOICE_TONES, 
@@ -18,8 +17,7 @@ export const CALL_AVATAR_TYPES = {
   ELENA: 'elena',
   MARCUS: 'marcus',
   SOPHIA: 'sophia',
-  MUSE_CYBER: 'muse',
-  CUSTOM: 'custom'
+  DAVID: 'david'
 };
 
 export default function LiveCallModal({
@@ -31,7 +29,6 @@ export default function LiveCallModal({
   // Call session states
   const [callDuration, setCallDuration] = useState(0);
   const [avatarType, setAvatarType] = useState(initialAvatar);
-  const [customAvatarImg, setCustomAvatarImg] = useState(null);
 
   // Voice Tone states
   const [selectedVoiceTone, setSelectedVoiceTone] = useState(() => {
@@ -41,12 +38,8 @@ export default function LiveCallModal({
     return parseFloat(localStorage.getItem('casjoe_voice_pitch') || '1.0');
   });
   const [voiceRate, setVoiceRate] = useState(() => {
-    return parseFloat(localStorage.getItem('casjoe_voice_rate') || '0.98');
+    return parseFloat(localStorage.getItem('casjoe_voice_rate') || '1.0');
   });
-  const [selectedVoiceName, setSelectedVoiceName] = useState(() => {
-    return localStorage.getItem('casjoe_voice_name') || '';
-  });
-  const [availableSystemVoices, setAvailableSystemVoices] = useState([]);
   const [isTestingVoice, setIsTestingVoice] = useState(false);
 
   // Call hardware & control states
@@ -72,21 +65,8 @@ export default function LiveCallModal({
   const timerIntervalRef = useRef(null);
   const isSpeakingRef = useRef(false);
   const containerRef = useRef(null);
-  const fileInputRef = useRef(null);
 
-  // Load OS speech synthesis voices
-  useEffect(() => {
-    const loadVoices = () => {
-      const v = lipSyncEngine.getAvailableVoices();
-      if (v.length > 0) {
-        setAvailableSystemVoices(v);
-      }
-    };
-    loadVoices();
-    if (window.speechSynthesis) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-  }, []);
+  const persona = THREE_AVATAR_PERSONAS[avatarType?.toUpperCase()] || THREE_AVATAR_PERSONAS.ELENA;
 
   // -----------------------------------------------------------------
   // 1. CALL LIFECYCLE & TIMER
@@ -107,19 +87,18 @@ export default function LiveCallModal({
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
-    // Initial greeting from AI Presenter
+    // Initial greeting from AI Presenter using Edge Neural Voice
     const initTimer = setTimeout(() => {
       setCallStatus('speaking');
-      const avatarName = avatarType === 'marcus' ? 'Marcus' : avatarType === 'sophia' ? 'Sophia' : 'Elena';
-      const greeting = `Hello Casper Joe! I'm ${avatarName}, your AI partner. I'm live on the line with video animated lip synchronization. How can I assist you with your business, missions, or leads today?`;
+      const greeting = `Hello Casper Joe! I'm ${persona.name}. I'm live on the line with real-time 3D facial blendshape animation and Microsoft Edge neural speech. What would you like to work on today?`;
       handleAiSpeak(greeting);
-    }, 800);
+    }, 700);
 
     return () => {
       clearTimeout(initTimer);
       handleEndCallCleanup();
     };
-  }, [isOpen]);
+  }, [isOpen, avatarType]);
 
   const handleEndCallCleanup = () => {
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -258,7 +237,7 @@ export default function LiveCallModal({
   };
 
   // -----------------------------------------------------------------
-  // 4. AI PROCESSING & SPEECH GENERATION (TTS + LIP SYNC)
+  // 4. AI PROCESSING & SPEECH GENERATION (EDGE NEURAL TTS + 3D LIP SYNC)
   // -----------------------------------------------------------------
   const handleUserSpoke = async (userText) => {
     if (!userText.trim()) return;
@@ -273,10 +252,9 @@ export default function LiveCallModal({
     setCurrentTranscript(userText);
 
     try {
-      const avatarName = avatarType === 'marcus' ? 'Marcus' : avatarType === 'sophia' ? 'Sophia' : 'Elena';
-      const systemPrompt = `You are ${avatarName}, an intelligent, polished, and natural AI advisor inside Casjoe Agent OS.
-Keep your answer clear, conversational, and natural (1 to 3 sentences max) because this is a live spoken video call.
-Avoid markdown asterisks or bullet points. Speak directly as a human presenter would.
+      const systemPrompt = `You are ${persona.name}, an intelligent, polished, and natural AI advisor inside Casjoe Agent OS.
+Keep your answer clear, conversational, and concise (1 to 3 sentences max) because this is a live spoken video call.
+Do not output markdown formatting like asterisks or hashtags. Speak directly and naturally as a human presenter would.
 User asked: "${userText}"`;
 
       let aiResponseText = '';
@@ -300,13 +278,13 @@ User asked: "${userText}"`;
       if (!aiResponseText) {
         const lower = userText.toLowerCase();
         if (lower.includes('lead') || lower.includes('linkedin') || lower.includes('mission')) {
-          aiResponseText = "I've checked your Live Missions. You can launch a LinkedIn lead scraper right away or audit connected Facebook profiles. Shall I open the missions board?";
+          aiResponseText = "I've inspected your Live Missions. You can launch an automated LinkedIn lead scraper right away or audit connected Facebook profiles. Shall I open the missions dashboard?";
         } else if (lower.includes('invoice') || lower.includes('sale') || lower.includes('money')) {
           aiResponseText = "Your Business Suite is fully synced. You have 3 pending invoices totaling $4,250 ready for follow up. Would you like me to draft reminders?";
         } else if (lower.includes('browser') || lower.includes('web') || lower.includes('site')) {
           aiResponseText = "The Agent Browser is standing by with cookie injection and session preservation ready to navigate any web destination.";
         } else if (lower.includes('who are you') || lower.includes('name') || lower.includes('casjoe')) {
-          aiResponseText = `I am ${avatarName}, your AI companion in Casjoe Agent OS. I feature real-time video animated lip synchronization so our conversations feel natural and lifelike!`;
+          aiResponseText = `I am ${persona.name}, your 3D executive AI advisor in Casjoe Agent OS. I am powered by Microsoft Edge neural voice streaming and real-time 3D blendshape facial animation!`;
         } else {
           aiResponseText = `I heard you clearly: "${userText}". I am coordinating with your background agents to handle this right now. What else would you like to review?`;
         }
@@ -333,8 +311,7 @@ User asked: "${userText}"`;
       await lipSyncEngine.speak(smoothed, {
         toneId: selectedVoiceTone,
         pitch: voicePitch,
-        rate: voiceRate,
-        voiceName: selectedVoiceName
+        rate: voiceRate
       });
     }
 
@@ -347,46 +324,25 @@ User asked: "${userText}"`;
     }
   };
 
-  // Preview / Test Voice Tone
+  // Preview / Test Voice Tone with real Edge Neural stream
   const handleTestVoiceTone = async (toneId) => {
     if (isTestingVoice) return;
     setIsTestingVoice(true);
     const preset = VOICE_TONES[toneId?.toUpperCase()] || VOICE_TONES.ELENA;
-    await lipSyncEngine.speak(preset.sampleText, {
+    const sample = `Hello Casper! This is the natural neural voice for ${preset.name}. It streams with human cadence and zero robotic artifacts.`;
+    await lipSyncEngine.speak(sample, {
       toneId,
       pitch: voicePitch,
-      rate: voiceRate,
-      voiceName: selectedVoiceName
+      rate: voiceRate
     });
     setIsTestingVoice(false);
   };
 
-  // Handle Custom Avatar Image Upload
-  const handleImageUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setCustomAvatarImg(event.target.result);
-      setAvatarType(CALL_AVATAR_TYPES.CUSTOM);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Select Avatar & automatically match Voice Tone
+  // Select Avatar & automatically sync Voice Tone
   const handleSelectAvatar = (type) => {
     setAvatarType(type);
-    if (type === CALL_AVATAR_TYPES.MARCUS) {
-      setSelectedVoiceTone('marcus');
-      lipSyncEngine.setVoiceTone('marcus');
-    } else if (type === CALL_AVATAR_TYPES.SOPHIA) {
-      setSelectedVoiceTone('sophia');
-      lipSyncEngine.setVoiceTone('sophia');
-    } else if (type === CALL_AVATAR_TYPES.ELENA) {
-      setSelectedVoiceTone('elena');
-      lipSyncEngine.setVoiceTone('elena');
-    }
+    setSelectedVoiceTone(type);
+    lipSyncEngine.setVoiceTone(type);
   };
 
   const handleSendTextMessage = (e) => {
@@ -485,23 +441,11 @@ User asked: "${userText}"`;
     );
   }
 
-  const isHumanAvatar = avatarType !== CALL_AVATAR_TYPES.MUSE_CYBER;
-  const currentAvatarName = avatarType === 'marcus' ? 'Marcus' : avatarType === 'sophia' ? 'Sophia' : avatarType === 'custom' ? 'Custom Avatar' : avatarType === 'muse' ? 'Muse Cyber' : 'Elena';
-
   return (
     <div 
       ref={containerRef}
       className="fixed inset-0 z-50 flex flex-col bg-[#050914] text-white select-none overflow-hidden"
     >
-      {/* Hidden file input for custom human photo upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
-
       {/* ------------------------------------------------------------- */}
       {/* 1. TOP CALL HEADER BAR                                        */}
       {/* ------------------------------------------------------------- */}
@@ -516,11 +460,11 @@ User asked: "${userText}"`;
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm md:text-base font-black font-['Outfit'] tracking-wide">
-                {currentAvatarName} • Live Call
+                {persona.name} • 3D Live Call
               </h2>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-bold text-emerald-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                HD VIDEO &amp; LIP-SYNC
+                3D BLENDSHAPES &amp; NEURAL AUDIO
               </span>
             </div>
             <span className="text-xs font-mono text-cyan-400/90 font-medium">
@@ -529,13 +473,13 @@ User asked: "${userText}"`;
           </div>
         </div>
 
-        {/* Center: Avatar Selection Bar (Elena, Marcus, Sophia, Custom, Cyber) */}
+        {/* Center: 3D Persona Selection Bar */}
         <div className="hidden sm:flex items-center gap-1.5 bg-[#0C1529] p-1.5 rounded-2xl border border-white/10">
           {[
-            { id: CALL_AVATAR_TYPES.ELENA, label: 'Elena', tag: 'Human' },
-            { id: CALL_AVATAR_TYPES.MARCUS, label: 'Marcus', tag: 'Human' },
-            { id: CALL_AVATAR_TYPES.SOPHIA, label: 'Sophia', tag: 'Human' },
-            { id: CALL_AVATAR_TYPES.MUSE_CYBER, label: 'Muse Cyber', tag: 'Vector' }
+            { id: CALL_AVATAR_TYPES.ELENA, label: 'Elena', tag: '3D Executive' },
+            { id: CALL_AVATAR_TYPES.MARCUS, label: 'Marcus', tag: '3D Commercial' },
+            { id: CALL_AVATAR_TYPES.SOPHIA, label: 'Sophia', tag: '3D Growth' },
+            { id: CALL_AVATAR_TYPES.DAVID, label: 'David', tag: '3D Corporate' }
           ].map((item) => (
             <button
               key={item.id}
@@ -552,20 +496,6 @@ User asked: "${userText}"`;
               </span>
             </button>
           ))}
-
-          {/* Upload Custom Photo Button */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className={`px-2.5 py-1 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-              avatarType === CALL_AVATAR_TYPES.CUSTOM
-                ? 'bg-white/15 text-white shadow-sm border border-white/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-            title="Upload any human photo from your computer"
-          >
-            <Upload className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Upload Photo</span>
-          </button>
         </div>
 
         {/* Right: Technical Badges & Window controls */}
@@ -595,33 +525,21 @@ User asked: "${userText}"`;
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* 2. CENTRAL VIDEO STAGE WITH ANIMATED AVATAR                   */}
+      {/* 2. CENTRAL VIDEO STAGE WITH 3D WEBGL BLENDSHAPE AVATAR        */}
       {/* ------------------------------------------------------------- */}
       <div className="relative flex-1 flex flex-col items-center justify-center p-4 overflow-hidden">
         
-        {/* Soft Radial Ambient Lighting */}
+        {/* Soft Radial Ambient Studio Lighting */}
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B1428] via-[#050914] to-[#04070F] pointer-events-none" />
 
-        {/* Central Avatar Stage */}
+        {/* Central 3D Human Blendshape Avatar */}
         <div className="relative z-10 my-auto">
-          {isHumanAvatar ? (
-            <AnimatedHumanAvatar
-              avatarId={avatarType}
-              customImage={avatarType === CALL_AVATAR_TYPES.CUSTOM ? customAvatarImg : null}
-              isSpeaking={callStatus === 'speaking'}
-              isListening={callStatus === 'listening'}
-              isThinking={callStatus === 'thinking'}
-              showRings={true}
-            />
-          ) : (
-            <AnimatedAvatar
-              avatarStyle={AVATAR_STYLES.MUSE}
-              isSpeaking={callStatus === 'speaking'}
-              isListening={callStatus === 'listening'}
-              isThinking={callStatus === 'thinking'}
-              showAudioRings={true}
-            />
-          )}
+          <ThreeHumanAvatar
+            personaId={avatarType}
+            isSpeaking={callStatus === 'speaking'}
+            isListening={callStatus === 'listening'}
+            isThinking={callStatus === 'thinking'}
+          />
         </div>
 
         {/* ----------------------------------------------------------- */}
@@ -662,7 +580,7 @@ User asked: "${userText}"`;
             {callStatus === 'speaking' && lastAiMessage && (
               <div className="bg-black/75 backdrop-blur-lg border border-cyan-500/30 rounded-2xl p-3.5 shadow-2xl text-center animate-in fade-in slide-in-from-bottom-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-cyan-400 block mb-1">
-                  {currentAvatarName} Speaking
+                  {persona.name} Speaking (Edge Neural)
                 </span>
                 <p className="text-sm md:text-base text-white font-medium leading-relaxed">
                   "{lastAiMessage}"
@@ -700,7 +618,7 @@ User asked: "${userText}"`;
             "Find LinkedIn leads",
             "What can you automate?",
             "Review pending invoices",
-            "Audit my connected accounts"
+            "Audit connected accounts"
           ].map((prompt, i) => (
             <button
               key={i}
@@ -723,7 +641,7 @@ User asked: "${userText}"`;
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-sm font-bold flex items-center gap-2 text-white">
               <Sliders className="w-4 h-4 text-cyan-400" />
-              <span>Voice Tone &amp; Audio Selection</span>
+              <span>Voice Tone &amp; Neural Streaming</span>
             </h3>
             <button
               onClick={() => setShowVoiceSettings(false)}
@@ -735,9 +653,14 @@ User asked: "${userText}"`;
 
           {/* Voice Tone Presets */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-              Natural Voice Tone Presets
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Edge Neural Voices (Studio Human)
+              </label>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                100% Free
+              </span>
+            </div>
 
             <div className="grid grid-cols-1 gap-2">
               {Object.values(VOICE_TONES).map((tone) => (
@@ -761,6 +684,9 @@ User asked: "${userText}"`;
                       <span>{tone.name}</span>
                     </h4>
                     <p className="text-[10px] text-slate-400 mt-0.5">{tone.description}</p>
+                    <span className="text-[9px] font-mono text-cyan-400/80 block mt-0.5">
+                      Voice: {tone.edgeVoice}
+                    </span>
                   </div>
 
                   <button
@@ -779,83 +705,6 @@ User asked: "${userText}"`;
             </div>
           </div>
 
-          {/* Pitch & Speed Fine-Tuning */}
-          <div className="space-y-4 pt-2 border-t border-white/10">
-            <div>
-              <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">Voice Pitch</span>
-                <span className="text-cyan-400 font-mono">{voicePitch.toFixed(2)}x</span>
-              </div>
-              <input
-                type="range"
-                min="0.7"
-                max="1.3"
-                step="0.02"
-                value={voicePitch}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setVoicePitch(val);
-                  lipSyncEngine.setCustomPitch(val);
-                }}
-                className="w-full accent-cyan-400 cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-slate-500 mt-0.5">
-                <span>Deeper</span>
-                <span>Default</span>
-                <span>Higher</span>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-xs font-semibold mb-1">
-                <span className="text-slate-300">Speech Rate / Speed</span>
-                <span className="text-cyan-400 font-mono">{voiceRate.toFixed(2)}x</span>
-              </div>
-              <input
-                type="range"
-                min="0.8"
-                max="1.25"
-                step="0.02"
-                value={voiceRate}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setVoiceRate(val);
-                  lipSyncEngine.setCustomRate(val);
-                }}
-                className="w-full accent-cyan-400 cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-slate-500 mt-0.5">
-                <span>Relaxed</span>
-                <span>Conversational</span>
-                <span>Fast</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Direct System Voice Selection */}
-          {availableSystemVoices.length > 0 && (
-            <div className="space-y-1.5 pt-2 border-t border-white/10">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Installed System Voice Override
-              </label>
-              <select
-                value={selectedVoiceName}
-                onChange={(e) => {
-                  setSelectedVoiceName(e.target.value);
-                  lipSyncEngine.setSelectedVoiceName(e.target.value);
-                }}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500"
-              >
-                <option value="">Auto-select Best Natural Voice</option>
-                {availableSystemVoices.map((v, i) => (
-                  <option key={i} value={v.name}>
-                    {v.name} ({v.lang})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
           <div className="pt-2 text-center">
             <button
               onClick={() => handleTestVoiceTone(selectedVoiceTone)}
@@ -863,7 +712,7 @@ User asked: "${userText}"`;
               className="w-full py-2.5 bg-gradient-to-r from-cyan-500 to-emerald-500 hover:brightness-110 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-cyan-500/20"
             >
               <Play className="w-3.5 h-3.5 fill-current" />
-              <span>{isTestingVoice ? 'Speaking Sample...' : 'Test Current Voice Tone'}</span>
+              <span>{isTestingVoice ? 'Streaming Audio Sample...' : 'Test Current Neural Voice'}</span>
             </button>
           </div>
         </div>
