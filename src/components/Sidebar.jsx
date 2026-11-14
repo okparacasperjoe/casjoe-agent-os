@@ -14,7 +14,7 @@ export default function Sidebar({ activeTab, setActiveTab, isCollapsed = false, 
   ];
   const isErpChildActive = erpSubItemIds.includes(activeTab);
   
-  const [isErpOpen, setIsErpOpen] = useState(isErpChildActive || true);
+  const [isErpOpen, setIsErpOpen] = useState(isErpChildActive);
 
   // Auto-expand ERP dropdown if child tab is active
   useEffect(() => {

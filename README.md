@@ -6,10 +6,10 @@ Casjoe Agent OS is an offline, enterprise‑grade business intelligence platform
 
 | Platform | Installer |
 |----------|-----------|
-| **Windows** | [Casjoe-Agent-OS-Setup-1.0.6-Windows.exe](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
-| **macOS** | [Casjoe-Agent-OS-Setup-1.0.6-mac.dmg](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
-| **Linux (tar.gz)** | [Casjoe-Agent-OS-1.0.6-Linux.tar.gz](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
-| **Linux (zip)** | [Casjoe-Agent-OS-1.0.6-Linux.zip](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
+| **Windows** | [Casjoe-Agent-OS-Setup-1.0.7-Windows.exe](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
+| **macOS** | [Casjoe-Agent-OS-Setup-1.0.7-mac.dmg](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
+| **Linux (tar.gz)** | [Casjoe-Agent-OS-1.0.7-Linux.tar.gz](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
+| **Linux (zip)** | [Casjoe-Agent-OS-1.0.7-Linux.zip](https://github.com/okparacasperjoe/casjoe-agent-os/releases/latest) |
 
 *(Note: You must have [Ollama](https://ollama.com/) installed on your machine to power the offline AI features.)*
 
